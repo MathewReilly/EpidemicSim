@@ -7,7 +7,7 @@ To add the repository locally, you will clone it from the main repository page o
 In a Visual Studio Terminal first navigate to the directory you would like to store the project.
 Then type this command in the terminal:
 ```
-"git clone 'link'"
+git clone 'link'
 ```
 ## Visual Studio may need to go through multiple steps to connect to github:
 There is documentation (from github) that will detail how you can connect your github account if this command fails. If you need help troubleshooting please reach out, I already had my account connected from previous classes and do not know all of the steps it will require to connect the accounts.

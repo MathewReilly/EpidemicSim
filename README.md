@@ -1,7 +1,7 @@
 # First you will need to get the repository on your machine locally:
 I'd highly recommend using Visual Studio Code, https://code.visualstudio.com/Download, as we can all be using the same environment.
 
-You will also need to be able to run some version of Java, I currently am using Java 21 but would be happy to use a more recent version, just reach out
+You will also need to be able to run some version of Java, I currently am using Java 21.0.2 but would be happy to use a more recent version, just reach out
 
 To add the repository locally, you will clone it from the main repository page on github. To do this, click on the green "<> Code" button located on the repository main page and copy the HTTPS web URL.
 In a Visual Studio Terminal first navigate to the directory you would like to store the project.

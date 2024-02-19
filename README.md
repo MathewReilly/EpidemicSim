@@ -43,3 +43,5 @@ git commit -m "some commit message"
 To delete a branch do so with:
 ```
 git branch -d 'branchname'
+
+Stest

@@ -2,12 +2,17 @@ public class Cell
 {
     private CellState state;
 
-    public CellState GetState()
+    public Cell()
+    {
+        state = CellState.SUSCEPTIBLE;
+    }
+
+    public CellState getState()
     {
         return this.state;
     }
 
-    public void SetState( CellState state )
+    public void setState( CellState state )
     {
         this.state = state;
     }

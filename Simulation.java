@@ -4,6 +4,11 @@ public class Simulation
     private int startingPopulation;
     private float infectionChance;
 
+    // simulation loop stuff
+    private boolean running;
+    private int frameCount;  // number of frames that have passed
+    private int targetDelta; // target time between each frame
+
     private Cell[][] grid;
 
 
@@ -12,6 +17,13 @@ public class Simulation
     {
         this.size = size;
         this.grid = new Cell[ size ][ size ];
+
+        this.running = false;
+
+        // This will change how long each frame takes. Currently
+        // set to 1000 milliseconds (1 second) per frame. Should
+        // be lower later on.
+        this.targetDelta = 1000;
     }
 
     public void reset()
@@ -24,11 +36,34 @@ public class Simulation
     {
         // the initial number of infected will start with 1 but may want to be changed later.
         populateGrid(1);
+        
+        // init starting values
+        this.running = true;
+        this.frameCount = 0;
 
-        // ON the simulation step - it is likely the method that should be done in parallel, this is because the range
-        // can be given for each thread to iterate on.
+        long prevFrameTime = System.currentTimeMillis();
 
-        printGrid();
+        while (running)
+        {
+            // timing data for setting the frame rate
+            long frameTime = System.currentTimeMillis();
+            long deltaTime = frameTime - prevFrameTime;
+            prevFrameTime = frameTime;
+
+            // update grid by running simulationstep
+            // ON the simulation step - it is likely the method that should be done in parallel, this is because the range
+            // can be given for each thread to iterate on.
+            simulationStep();
+
+            // print grid to screen
+            printGrid();
+
+            this.frameCount += 1;
+
+            // apply framerate cap
+            long delay = frameTime + this.targetDelta - System.currentTimeMillis();
+            try { if (delay > 0 ) Thread.sleep(delay); } catch (InterruptedException e) { this.running = false; break; }
+        }
     }
 
     // The cells states by default is susceptible making our default grid that of susceptible cells, however there needs to be

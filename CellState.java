@@ -2,5 +2,6 @@ public enum CellState
 {
     SUSCEPTIBLE,
     INFECTIOUS,
-    REMOVED
+    REMOVED,
+    BORDER
 }

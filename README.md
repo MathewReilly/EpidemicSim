@@ -1,4 +1,14 @@
-# First you will need to get the repository on your machine locally:
+# Compilation Instructions:
+Our program is built using Java 21.0.2.
+
+After cloning the repository, to run the program, navigate to the directory and run:
+
+```
+javac Main.java
+java Main
+```
+
+# (Instructions for Group) First you will need to get the repository on your machine locally:
 I'd highly recommend using Visual Studio Code, https://code.visualstudio.com/Download, as we can all be using the same environment.
 
 You will also need to be able to run some version of Java, I currently am using Java 21.0.2 but would be happy to use a more recent version, just reach out

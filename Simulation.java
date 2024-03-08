@@ -8,14 +8,9 @@ import java.util.Vector;
 public class Simulation
 {
     private int size;
-    private int borderedGridSize;
+    public int borderedGridSize;
     private int startingPopulation;
     private float infectionChance;
-
-    // simulation loop stuff
-    private boolean running;
-    private int frameCount;  // number of frames that have passed
-    private int targetDelta; // target time between each frame
 
     // sim things - neighborModifiers, make it easy for the thread to locate neighbors in a clearer way
     final int fL = -2; // far left neighbor
@@ -27,7 +22,7 @@ public class Simulation
     final int fD = 2; // far down neighbor
     final int nD = 1; // near down neighbor
 
-    private Cell[][] grid;
+    public Cell[][] grid;
 
 
     // setup simulation
@@ -36,13 +31,6 @@ public class Simulation
         this.size = size;
         this.borderedGridSize = size + 8;
         this.grid = new Cell[ borderedGridSize ][ borderedGridSize ];
-
-        this.running = false;
-
-        // This will change how long each frame takes. Currently
-        // set to 1000 milliseconds (1 second) per frame. Should
-        // be lower later on.
-        this.targetDelta = 1000;
     }
 
     // this method is largely untested and may run into errors as testing happens
@@ -119,46 +107,9 @@ public class Simulation
         this.grid = new Cell[ this.borderedGridSize ][ this.borderedGridSize ];
     }
 
-    // main loop for the simulation
-    public void run() 
-    {
-        // the initial number of infected will start with 1 but may want to be changed later.
-        populateGrid(1);
-        
-        // init starting values
-        this.running = true;
-        this.frameCount = 0;
-
-        long prevFrameTime = System.currentTimeMillis();
-
-        while (running)
-        {
-            // timing data for setting the frame rate
-            long frameTime = System.currentTimeMillis();
-            long deltaTime = frameTime - prevFrameTime;
-            prevFrameTime = frameTime;
-
-            // update grid by running simulationstep
-            // ON the simulation step - it is likely the method that should be done in parallel, this is because the range
-            // can be given for each thread to iterate on.
-            simulationStep(-1); // -1 is used so default on switch is used
-
-            // print grid to screen
-            printGrid();
-            System.out.println();
-            System.out.println();
-
-            this.frameCount += 1;
-
-            // apply framerate cap
-            long delay = frameTime + this.targetDelta - System.currentTimeMillis();
-            try { if (delay > 0 ) Thread.sleep(delay); } catch (InterruptedException e) { this.running = false; break; }
-        }
-    }
-
     // The cells states by default is susceptible making our default grid that of susceptible cells, however there needs to be
     // a border and generated infected cells
-    private void populateGrid(int numInitialInfected)
+    public void populateGrid(int numInitialInfected)
     {
         for(int rows = 0; rows < borderedGridSize; rows++)
         {
@@ -339,33 +290,4 @@ public class Simulation
 
     }
 
-    // if we want to draw to the screen later
-    public void render() {}
-
-    private void printGrid()
-    {
-        for(int rows = 0; rows < borderedGridSize; rows++)
-        {
-            for(int cols = 0; cols < borderedGridSize; cols++)
-            {
-                if(grid[rows][cols].getState() == CellState.SUSCEPTIBLE)
-                {
-                    System.out.printf("S ", grid[rows][cols]);
-                }
-                if(grid[rows][cols].getState() == CellState.BORDER)
-                {
-                    System.out.printf("B ", grid[rows][cols]);
-                }
-                if(grid[rows][cols].getState() == CellState.INFECTIOUS)
-                {
-                    System.out.printf("I ", grid[rows][cols]);
-                }
-                if(grid[rows][cols].getState() == CellState.REMOVED)
-                {
-                    System.out.printf("R ", grid[rows][cols]);
-                }
-            }
-            System.out.println();
-        }
-    }
 }

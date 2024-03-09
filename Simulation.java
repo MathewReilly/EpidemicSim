@@ -28,6 +28,9 @@ public class Simulation
     // setup simulation
     public Simulation( int size )
     {
+        // force size to be a multiple of 3
+        size = size - size % 3;
+
         this.gridSize = size;
         this.borderedGridSize = size + 8;
         this.grid = new Cell[ borderedGridSize ][ borderedGridSize ];

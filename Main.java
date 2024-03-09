@@ -2,7 +2,7 @@ public class Main
 {
     public static void main( String[] args )
     {
-        Simulation s = new Simulation(9);
+        Simulation s = new Simulation(11);
         Window w = new Window(s);
         w.run();
     }

@@ -122,9 +122,6 @@ public class Window
 
             // print grid to screen
             render();
-            printGrid();
-            System.out.println();
-            System.out.println();
 
             this.frameCount += 1;
 
@@ -138,32 +135,5 @@ public class Window
     public void render()
     {
         grid.repaint();
-    }
-
-    private void printGrid()
-    {
-        for(int rows = 0; rows < sim.borderedGridSize; rows++)
-        {
-            for(int cols = 0; cols < sim.borderedGridSize; cols++)
-            {
-                if(sim.grid[rows][cols].getState() == CellState.SUSCEPTIBLE)
-                {
-                    System.out.printf("S ", sim.grid[rows][cols]);
-                }
-                if(sim.grid[rows][cols].getState() == CellState.BORDER)
-                {
-                    System.out.printf("B ", sim.grid[rows][cols]);
-                }
-                if(sim.grid[rows][cols].getState() == CellState.INFECTIOUS)
-                {
-                    System.out.printf("I ", sim.grid[rows][cols]);
-                }
-                if(sim.grid[rows][cols].getState() == CellState.REMOVED)
-                {
-                    System.out.printf("R ", sim.grid[rows][cols]);
-                }
-            }
-            System.out.println();
-        }
     }
 }

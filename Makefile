@@ -5,3 +5,8 @@ run: main.class
 
 main.class: $(SRC)
 	javac $(SRC)
+
+clean:
+	rm *.class
+
+.PHONY: run clean

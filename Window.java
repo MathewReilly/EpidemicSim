@@ -61,19 +61,19 @@ public class Window
 
     // settings
     protected boolean debug;
-    protected boolean targetTickDelta;
-    protected boolean tickCount;
 
     // simulation loop stuff
     private boolean running;
     private int frameCount;  // number of frames that have passed
+    private int tickCount;
     private int targetFrameDelta; // target time between each frame
+    private int targetTickDelta;
 
     public Window(Simulation sim)
     {
         this.sim = sim;
 
-        this.debug = false;
+        this.debug = true;
 
         this.running = false;
 

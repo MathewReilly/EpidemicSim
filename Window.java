@@ -1,17 +1,11 @@
 import javax.swing.*;
 import java.awt.*;
+import java.awt.geom.*;
 
 public class Window
 {
     private class GridPanel extends JPanel
     {
-        private Simulation sim;
-
-        public GridPanel(Simulation sim)
-        {
-            this.sim = sim;
-        }
-
         @Override
         public void paint(Graphics g)
         {
@@ -21,27 +15,36 @@ public class Window
 
             // draw grid
             Dimension dim = this.getSize();
-            int w = dim.width / sim.borderedGridSize;
-            int h = dim.height / sim.borderedGridSize;
-            int size = Math.min(w, h);
 
-            for(int rows = 0; rows < sim.borderedGridSize; rows++)
+            int gridSize = Window.this.debug ? Window.this.sim.borderedGridSize : Window.this.sim.gridSize;
+            float w = dim.width / gridSize;
+            float h = dim.height / gridSize;
+            float cellSize = Math.min(w, h);
+
+            for(int rows = 0; rows < gridSize; rows++)
             {
-                for(int cols = 0; cols < sim.borderedGridSize; cols++)
+                for(int cols = 0; cols < gridSize; cols++)
                 {
-                    int x = cols * size;
-                    int y = rows * size;
+                    float x = cols * cellSize;
+                    float y = rows * cellSize;
 
-                    switch (sim.grid[rows][cols].getState())
+                    CellState cs = Window.this.debug ?
+                        Window.this.sim.grid[rows][cols].getState() :
+                        Window.this.sim.getFromGrid(rows, cols).getState();
+
+                    Rectangle2D.Double r = new Rectangle2D.Double(x, y, cellSize, cellSize);
+
+                    switch (cs)
                     {
-                        case CellState.SUSCEPTIBLE -> { g2d.setColor(Color.blue);  g2d.fillRect(x, y, size, size); } 
-                        case CellState.INFECTIOUS  -> { g2d.setColor(Color.red);   g2d.fillRect(x, y, size, size); }
-                        case CellState.REMOVED     -> { g2d.setColor(Color.green); g2d.fillRect(x, y, size, size); }
-                        case CellState.BORDER      -> { g2d.setColor(Color.gray);  g2d.fillRect(x, y, size, size); }
+                        case CellState.SUSCEPTIBLE -> { g2d.setColor(Color.blue);  } 
+                        case CellState.INFECTIOUS  -> { g2d.setColor(Color.red);   }
+                        case CellState.REMOVED     -> { g2d.setColor(Color.green); }
+                        case CellState.BORDER      -> { g2d.setColor(Color.gray);  }
                     }
 
+                    g2d.fill(r);
                     g2d.setColor(Color.black);
-                    g2d.drawRect(x, y, size, size);
+                    g2d.draw(r);
                 }
             }
         }
@@ -56,6 +59,11 @@ public class Window
     private JPanel grid;
     private JPanel controls;
 
+    // settings
+    protected boolean debug;
+    protected boolean targetTickDelta;
+    protected boolean tickCount;
+
     // simulation loop stuff
     private boolean running;
     private int frameCount;  // number of frames that have passed
@@ -64,6 +72,8 @@ public class Window
     public Window(Simulation sim)
     {
         this.sim = sim;
+
+        this.debug = false;
 
         this.running = false;
 
@@ -74,12 +84,12 @@ public class Window
 
         // setup jframe window
         frame    = new JFrame("Epidemic Simulator");
-        grid     = new GridPanel(sim);
+        grid     = new GridPanel();
         controls = new ControlPanel();
 
         frame.add(grid);
 
-        frame.setSize(600, 400);
+        frame.setSize(800, 800);
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         frame.setLocationRelativeTo(null);
 

@@ -7,7 +7,7 @@ import java.util.Vector;
 
 public class Simulation
 {
-    private int size;
+    public int gridSize;
     public int borderedGridSize;
     private int startingPopulation;
     private float infectionChance;
@@ -28,7 +28,7 @@ public class Simulation
     // setup simulation
     public Simulation( int size )
     {
-        this.size = size;
+        this.gridSize = size;
         this.borderedGridSize = size + 8;
         this.grid = new Cell[ borderedGridSize ][ borderedGridSize ];
     }
@@ -36,70 +36,26 @@ public class Simulation
     // this method is largely untested and may run into errors as testing happens
     public void updateGrid(int row, int col, CellState type)
     {
-        int borderLoc = size / 3;
-
-        // will correctly index, ignoring the padding
-        if(row < borderLoc)
-        {
-            row = row + 2;
-        } else if (row < borderLoc * 2)
-        {
-            row = row + 4;
-        } else
-        {
-            row = row + 6;
-        }
-
-        if(col < borderLoc)
-        {
-            col = col + 2;
-        } else if (col < borderLoc * 2)
-        {
-            col = col + 4;
-        } else
-        {
-            col = col + 6;
-        }
-
-        // System.out.printf("\n %d, %d \n", row, col);
-
-        grid[row][col].setState(type);
+        Cell c = getFromGrid(row, col);
+        c.setState(type);
 
         if(type == CellState.INFECTIOUS)
         {
-            grid[row][col].setCounter(7);
+            c.setCounter(7);
         }
-
     }
 
     public Cell getFromGrid(int row, int col)
     {
-        int borderLoc = size / 3;
+        // wrap coordinates
+        row = row % gridSize;
+        col = col % gridSize;
 
-        // will correctly index, ignoring the padding
-        if(row < borderLoc + 1)
-        {
-            row = row + 2;
-        } else if (row < borderLoc * 2 + 1)
-        {
-            row = row + 4;
-        } else
-        {
-            row = row + 6;
-        }
+        int split = gridSize / 3;
+        int x = (2 * ((col / split) + 1) + col);
+        int y = (2 * ((row / split) + 1) + row);
 
-        if(col < borderLoc + 1)
-        {
-            col = col + 2;
-        } else if (col < borderLoc * 2 + 1)
-        {
-            col = col + 4;
-        } else
-        {
-            col = col + 6;
-        }
-
-        return grid[row][col];
+        return grid[y][x];
     }
 
     public void reset()
@@ -164,8 +120,8 @@ public class Simulation
         int col = 0;
         for(int i = 0; i < numInitialInfected; i++)
         {
-            row = (int)(Math.random() * size);
-            col = (int)(Math.random() * size);
+            row = (int)(Math.random() * gridSize);
+            col = (int)(Math.random() * gridSize);
 
             updateGrid(row, col, CellState.INFECTIOUS);
         }
@@ -224,9 +180,9 @@ public class Simulation
         }
 
         // collect all of the neighboring susceptible cells
-        for(int rows = 0; rows < size; rows++)
+        for(int rows = 0; rows < gridSize; rows++)
         {
-            for(int cols = 0; cols < size; cols++)
+            for(int cols = 0; cols < gridSize; cols++)
             {
                 curCell = getFromGrid(rows, cols);
                 // If a cell is infected, find all susceptible neighbors. Once neighbors are found, decreate infection timer.

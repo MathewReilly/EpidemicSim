@@ -17,16 +17,16 @@ public class Window
             Dimension dim = this.getSize();
 
             int gridSize = Window.this.debug ? Window.this.sim.borderedGridSize : Window.this.sim.gridSize;
-            float w = dim.width / gridSize;
-            float h = dim.height / gridSize;
-            float cellSize = Math.min(w, h);
+            double w = (double) dim.width / gridSize;
+            double h = (double) dim.height / gridSize;
+            double cellSize = Math.min(w, h);
 
             for(int rows = 0; rows < gridSize; rows++)
             {
                 for(int cols = 0; cols < gridSize; cols++)
                 {
-                    float x = cols * cellSize;
-                    float y = rows * cellSize;
+                    double x = cols * cellSize;
+                    double y = rows * cellSize;
 
                     CellState cs = Window.this.debug ?
                         Window.this.sim.grid[rows][cols].getState() :

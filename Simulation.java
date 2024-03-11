@@ -7,15 +7,10 @@ import java.util.Vector;
 
 public class Simulation
 {
-    private int size;
-    private int borderedGridSize;
+    public int gridSize;
+    public int borderedGridSize;
     private int startingPopulation;
     private float infectionChance;
-
-    // simulation loop stuff
-    private boolean running;
-    private int frameCount;  // number of frames that have passed
-    private int targetDelta; // target time between each frame
 
     // sim things - neighborModifiers, make it easy for the thread to locate neighbors in a clearer way
     final int fL = -2; // far left neighbor
@@ -27,138 +22,65 @@ public class Simulation
     final int fD = 2; // far down neighbor
     final int nD = 1; // near down neighbor
 
-    private Cell[][] grid;
+    public Cell[][] grid;
 
 
     // setup simulation
     public Simulation( int size )
     {
-        this.size = size;
+        // force size to be a multiple of 3
+        size = size - size % 3;
+
+        this.gridSize = size;
         this.borderedGridSize = size + 8;
         this.grid = new Cell[ borderedGridSize ][ borderedGridSize ];
-
-        this.running = false;
-
-        // This will change how long each frame takes. Currently
-        // set to 1000 milliseconds (1 second) per frame. Should
-        // be lower later on.
-        this.targetDelta = 1000;
     }
 
     // this method is largely untested and may run into errors as testing happens
     public void updateGrid(int row, int col, CellState type)
     {
-        int borderLoc = size / 3;
-
-        // will correctly index, ignoring the padding
-        if(row < borderLoc)
-        {
-            row = row + 2;
-        } else if (row < borderLoc * 2)
-        {
-            row = row + 4;
-        } else
-        {
-            row = row + 6;
-        }
-
-        if(col < borderLoc)
-        {
-            col = col + 2;
-        } else if (col < borderLoc * 2)
-        {
-            col = col + 4;
-        } else
-        {
-            col = col + 6;
-        }
-
-        // System.out.printf("\n %d, %d \n", row, col);
-
-        grid[row][col].setState(type);
+        Cell c = getFromGrid(row, col);
+        c.setState(type);
 
         if(type == CellState.INFECTIOUS)
         {
-            grid[row][col].setCounter(7);
+            c.setCounter(7);
         }
-
     }
 
     public Cell getFromGrid(int row, int col)
     {
-        int borderLoc = size / 3;
+        // wrap coordinates
+        row = row % gridSize;
+        col = col % gridSize;
 
-        // will correctly index, ignoring the padding
-        if(row < borderLoc + 1)
-        {
-            row = row + 2;
-        } else if (row < borderLoc * 2 + 1)
-        {
-            row = row + 4;
-        } else
-        {
-            row = row + 6;
-        }
+        int split = gridSize / 3;
+        int x = (2 * ((col / split) + 1) + col);
+        int y = (2 * ((row / split) + 1) + row);
 
-        if(col < borderLoc + 1)
-        {
-            col = col + 2;
-        } else if (col < borderLoc * 2 + 1)
-        {
-            col = col + 4;
-        } else
-        {
-            col = col + 6;
-        }
-
-        return grid[row][col];
+        return grid[y][x];
     }
 
     public void reset()
     {
         this.grid = new Cell[ this.borderedGridSize ][ this.borderedGridSize ];
+        populateGrid(1);
     }
 
-    // main loop for the simulation
-    public void run() 
+    public void resetNewGridSize(int size)
     {
-        // the initial number of infected will start with 1 but may want to be changed later.
+        // force size to be a multiple of 3
+        size = size - size % 3;
+
+        this.gridSize = size;
+        this.borderedGridSize = size + 8;
+        this.grid = new Cell[ borderedGridSize ][ borderedGridSize ];
         populateGrid(1);
-        
-        // init starting values
-        this.running = true;
-        this.frameCount = 0;
-
-        long prevFrameTime = System.currentTimeMillis();
-
-        while (running)
-        {
-            // timing data for setting the frame rate
-            long frameTime = System.currentTimeMillis();
-            long deltaTime = frameTime - prevFrameTime;
-            prevFrameTime = frameTime;
-
-            // update grid by running simulationstep
-            // ON the simulation step - it is likely the method that should be done in parallel, this is because the range
-            // can be given for each thread to iterate on.
-            simulationStep(-1); // -1 is used so default on switch is used
-
-            // print grid to screen
-            printGrid();
-            System.out.println();
-            System.out.println();
-
-            this.frameCount += 1;
-
-            // apply framerate cap
-            long delay = frameTime + this.targetDelta - System.currentTimeMillis();
-            try { if (delay > 0 ) Thread.sleep(delay); } catch (InterruptedException e) { this.running = false; break; }
-        }
     }
 
     // The cells states by default is susceptible making our default grid that of susceptible cells, however there needs to be
     // a border and generated infected cells
-    private void populateGrid(int numInitialInfected)
+    public void populateGrid(int numInitialInfected)
     {
         for(int rows = 0; rows < borderedGridSize; rows++)
         {
@@ -213,8 +135,8 @@ public class Simulation
         int col = 0;
         for(int i = 0; i < numInitialInfected; i++)
         {
-            row = (int)(Math.random() * size);
-            col = (int)(Math.random() * size);
+            row = (int)(Math.random() * gridSize);
+            col = (int)(Math.random() * gridSize);
 
             updateGrid(row, col, CellState.INFECTIOUS);
         }
@@ -273,9 +195,9 @@ public class Simulation
         }
 
         // collect all of the neighboring susceptible cells
-        for(int rows = 0; rows < size; rows++)
+        for(int rows = 0; rows < gridSize; rows++)
         {
-            for(int cols = 0; cols < size; cols++)
+            for(int cols = 0; cols < gridSize; cols++)
             {
                 curCell = getFromGrid(rows, cols);
                 // If a cell is infected, find all susceptible neighbors. Once neighbors are found, decreate infection timer.
@@ -339,33 +261,4 @@ public class Simulation
 
     }
 
-    // if we want to draw to the screen later
-    public void render() {}
-
-    private void printGrid()
-    {
-        for(int rows = 0; rows < borderedGridSize; rows++)
-        {
-            for(int cols = 0; cols < borderedGridSize; cols++)
-            {
-                if(grid[rows][cols].getState() == CellState.SUSCEPTIBLE)
-                {
-                    System.out.printf("S ", grid[rows][cols]);
-                }
-                if(grid[rows][cols].getState() == CellState.BORDER)
-                {
-                    System.out.printf("B ", grid[rows][cols]);
-                }
-                if(grid[rows][cols].getState() == CellState.INFECTIOUS)
-                {
-                    System.out.printf("I ", grid[rows][cols]);
-                }
-                if(grid[rows][cols].getState() == CellState.REMOVED)
-                {
-                    System.out.printf("R ", grid[rows][cols]);
-                }
-            }
-            System.out.println();
-        }
-    }
 }

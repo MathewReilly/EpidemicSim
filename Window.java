@@ -1,5 +1,6 @@
 import javax.swing.*;
 import java.awt.*;
+import java.awt.event.*;
 import java.awt.geom.*;
 
 public class Window
@@ -52,6 +53,84 @@ public class Window
 
     private class ControlPanel extends JPanel
     {
+        private JButton resetB;
+        private JButton pauseB;
+        private JCheckBox debugCB;
+        private JTextField gridSizeTF;
+        private JTextField deltaFrameTimeTF;
+
+        public ControlPanel()
+        {
+            resetB              = new JButton("Reset");
+            pauseB              = new JButton("Pause");
+            debugCB             = new JCheckBox("Show Border");
+            deltaFrameTimeTF    = new JTextField();
+            gridSizeTF          = new JTextField();
+
+            resetB.addActionListener(new ActionListener() {
+                @Override
+                public void actionPerformed(ActionEvent e)
+                {
+                    Window.this.sim.reset();
+                    Window.this.frameCount = 0;
+                    Window.this.grid.repaint();
+                }
+            });
+
+            pauseB.addActionListener(new ActionListener() {
+                @Override
+                public void actionPerformed(ActionEvent e)
+                {
+                    Window.this.pause = !Window.this.pause;
+                    String s = Window.this.pause ? "Unpause" : "Pause";
+                    pauseB.setText(s);
+                }
+            });
+
+            debugCB.addActionListener(new ActionListener() {
+                @Override
+                public void actionPerformed(ActionEvent e)
+                {
+                    Window.this.debug = !Window.this.debug;
+                    Window.this.grid.repaint();
+                }
+            });
+
+            deltaFrameTimeTF.addActionListener(new ActionListener() {
+                @Override
+                public void actionPerformed(ActionEvent e)
+                {
+                    Window.this.targetFrameDelta = Integer.parseInt(deltaFrameTimeTF.getText());
+                }
+            });
+
+            gridSizeTF.addActionListener(new ActionListener() {
+                @Override
+                public void actionPerformed(ActionEvent e)
+                {
+                    Window.this.sim.resetNewGridSize(Integer.parseInt(gridSizeTF.getText()));
+                    Window.this.frameCount = 0;
+                    Window.this.grid.repaint();
+                }
+            });
+
+            setLayout(new BoxLayout(this, BoxLayout.Y_AXIS));
+            //setLayout(new GridLayout(4, 1));
+
+            // add stuff to panel
+            add(resetB);
+            add(pauseB);
+            add(debugCB);
+            add(deltaFrameTimeTF);
+            add(gridSizeTF);
+
+            // set settings for things
+            debugCB.setSelected(Window.this.debug);
+            gridSizeTF.setText(Integer.toString(Window.this.sim.gridSize));
+            gridSizeTF.setMaximumSize(new Dimension(Integer.MAX_VALUE, gridSizeTF.getPreferredSize().height));
+            deltaFrameTimeTF.setText(Integer.toString(Window.this.targetFrameDelta));
+            deltaFrameTimeTF.setMaximumSize(new Dimension(Integer.MAX_VALUE, deltaFrameTimeTF.getPreferredSize().height));
+        }
     }
 
     private Simulation sim;
@@ -61,13 +140,14 @@ public class Window
 
     // settings
     protected boolean debug;
+    protected boolean pause;
 
     // simulation loop stuff
-    private boolean running;
-    private int frameCount;  // number of frames that have passed
-    private int tickCount;
-    private int targetFrameDelta; // target time between each frame
-    private int targetTickDelta;
+    protected boolean running;
+    protected int frameCount;  // number of frames that have passed
+    protected int tickCount;
+    protected int targetFrameDelta; // target time between each frame
+    protected int targetTickDelta;
 
     public Window(Simulation sim)
     {
@@ -76,6 +156,7 @@ public class Window
         this.debug = true;
 
         this.running = false;
+        this.pause = false;
 
         // This will change how long each frame takes. Currently
         // set to 1000 milliseconds (1 second) per frame. Should
@@ -87,7 +168,8 @@ public class Window
         grid     = new GridPanel();
         controls = new ControlPanel();
 
-        frame.add(grid);
+        frame.add(grid, BorderLayout.CENTER);
+        frame.add(controls, BorderLayout.EAST);
 
         frame.setSize(800, 800);
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
@@ -118,7 +200,10 @@ public class Window
             // update grid by running simulationstep
             // ON the simulation step - it is likely the method that should be done in parallel, this is because the range
             // can be given for each thread to iterate on.
-            sim.simulationStep(-1); // -1 is used so default on switch is used
+            if (!pause)
+            {
+                sim.simulationStep(-1); // -1 is used so default on switch is used
+            }
 
             // print grid to screen
             render();

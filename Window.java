@@ -2,6 +2,7 @@ import javax.swing.*;
 import java.awt.*;
 import java.awt.event.*;
 import java.awt.geom.*;
+import java.util.*;
 
 public class Window
 {
@@ -148,6 +149,7 @@ public class Window
     protected int tickCount;
     protected int targetFrameDelta; // target time between each frame
     protected int targetTickDelta;
+    protected ArrayList<Integer> sCounts, iCounts, rCounts;
 
     public Window(Simulation sim)
     {
@@ -187,6 +189,9 @@ public class Window
         // init starting values
         this.running = true;
         this.frameCount = 0;
+        this.sCounts = new ArrayList<Integer>();
+        this.iCounts = new ArrayList<Integer>();
+        this.rCounts = new ArrayList<Integer>();
 
         long prevFrameTime = System.currentTimeMillis();
 
@@ -204,6 +209,10 @@ public class Window
             {
                 sim.simulationStep(-1); // -1 is used so default on switch is used
             }
+            updateListCounts(frameCount); // Update SIR
+            // System.out.println("\nS: " + sCounts.get(frameCount));
+            // System.out.println("I: " + iCounts.get(frameCount));
+            // System.out.println("R: " + rCounts.get(frameCount));
 
             // print grid to screen
             render();
@@ -214,6 +223,20 @@ public class Window
             long delay = frameTime + this.targetFrameDelta - System.currentTimeMillis();
             try { if (delay > 0) Thread.sleep(delay); } catch (InterruptedException e) { this.running = false; break; }
         }
+    }
+
+    // Update SIR for this frame (day)
+    public void updateListCounts(int frameCount)
+    {
+        if (sCounts.size() < frameCount+1)
+        {
+            sCounts.add(0);
+            iCounts.add(0);
+            rCounts.add(0);
+        }
+        sCounts.set(frameCount, sim.sCount);
+        iCounts.set(frameCount, sim.iCount);
+        rCounts.set(frameCount, sim.rCount);
     }
 
     // if we want to draw to the screen later

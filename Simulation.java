@@ -23,7 +23,7 @@ public class Simulation
     final int nD = 1; // near down neighbor
 
     public Cell[][] grid;
-
+    public int sCount, iCount, rCount;
 
     // setup simulation
     public Simulation( int size )
@@ -90,7 +90,6 @@ public class Simulation
             }
         }
 
-
         // start with border so infected cell will not be generated on that location
         // to divide up the grid, the most simple solution will be to divide it into 3rds, rounded down (by default), 
         // marking cells as border.
@@ -128,8 +127,6 @@ public class Simulation
             grid[borderedGridSize - 1][cols].setState(CellState.BORDER);
         }
 
-
-
         // infect random cells at the start
         int row = 0;
         int col = 0;
@@ -140,8 +137,6 @@ public class Simulation
 
             updateGrid(row, col, CellState.INFECTIOUS);
         }
-
-        
     }
 
     // The simulation step will take the current grid and apply changes to it.
@@ -259,6 +254,33 @@ public class Simulation
             updateGrid(gridChanges.elementAt(i).getRow(), gridChanges.elementAt(i).getCol(), CellState.INFECTIOUS);
         }
 
+        GetSIR();
+    }
+
+    private void GetSIR()
+    {
+        sCount = 0;
+        iCount = 0;
+        rCount = 0;
+        for(int rows = 0; rows < gridSize; rows++)
+        {
+            for(int cols = 0; cols < gridSize; cols++)
+            {
+                Cell curCell = getFromGrid(rows, cols);
+                if (curCell.getState() == CellState.SUSCEPTIBLE)
+                {
+                    sCount++;
+                }
+                else if (curCell.getState() == CellState.INFECTIOUS)
+                {
+                    iCount++;
+                }
+                else
+                {
+                    rCount++;
+                }
+            }
+        }
     }
 
 }

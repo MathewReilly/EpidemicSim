@@ -208,13 +208,14 @@ public class Simulation
                 colEnd = gridSize;
                 break;
             default:
-                // Handle default case
                 break;
         }
     
-        // Loop through the specified section of the grid
-        for (int rows = rowStart; rows < rowEnd; rows++) {
-            for (int cols = colStart; cols < colEnd; cols++) {                
+        // collect all of the neighboring susceptible cells
+        for (int rows = rowStart; rows < rowEnd; rows++) 
+        {
+            for (int cols = colStart; cols < colEnd; cols++) 
+            {                
                 
                 curCell = getFromGrid(rows, cols);
                 // If a cell is infected, find all susceptible neighbors. Once neighbors are found, decreate infection timer.

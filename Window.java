@@ -187,7 +187,6 @@ public class Window
     // main loop for the simulation
     public void run() 
     {
-
         ExecutorService executor = Executors.newFixedThreadPool(NUM_THREADS);
 
         // the initial number of infected will start with 1 but may want to be changed later.
@@ -202,16 +201,19 @@ public class Window
 
         long prevFrameTime = System.currentTimeMillis();
 
-        while (running) {
+        while (running)
+        {
             // Timing data for setting the frame rate
             long frameTime = System.currentTimeMillis();
             long deltaTime = frameTime - prevFrameTime;
             prevFrameTime = frameTime;
 
             // Update grid by running simulation step
-            if (!pause) {
+            if (!pause)
+            {
                 // Submit tasks to executor for parallel execution
-                for (int i = 0; i < NUM_THREADS; i++) {
+                for (int i = 0; i < NUM_THREADS; i++)
+                {
                     final int threadNum = i;
                     executor.submit(() -> sim.simulationStep(threadNum));
                 }
@@ -223,9 +225,11 @@ public class Window
 
             // Apply framerate cap
             long delay = frameTime + this.targetFrameDelta - System.currentTimeMillis();
-            try {
+            try 
+            {
                 if (delay > 0) Thread.sleep(delay);
-            } catch (InterruptedException e) {
+            } catch (InterruptedException e)
+            {
                 this.running = false;
                 break;
             }

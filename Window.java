@@ -13,9 +13,9 @@ public class Window
     private class GridPanel extends JPanel
     {
         @Override
-        public void paint(Graphics g)
+        public void paintComponent(Graphics g)
         {
-            super.paint(g);
+            super.paintComponent(g);
             Graphics2D g2d = (Graphics2D) g;
             g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
 
@@ -63,6 +63,9 @@ public class Window
         private JCheckBox debugCB;
         private JTextField gridSizeTF;
         private JTextField deltaFrameTimeTF;
+        private JTextField deltaTickTimeTF;
+        private JLabel fpsL;
+        private JLabel tpsL;
 
         public ControlPanel()
         {
@@ -70,15 +73,16 @@ public class Window
             pauseB              = new JButton("Pause");
             debugCB             = new JCheckBox("Show Border");
             deltaFrameTimeTF    = new JTextField();
+            deltaTickTimeTF     = new JTextField();
             gridSizeTF          = new JTextField();
+            fpsL                = new JLabel();
+            tpsL                = new JLabel();
 
             resetB.addActionListener(new ActionListener() {
                 @Override
                 public void actionPerformed(ActionEvent e)
                 {
-                    Window.this.sim.reset();
-                    Window.this.frameCount = 0;
-                    Window.this.grid.repaint();
+                    Window.this.reset = true;
                 }
             });
 
@@ -97,7 +101,6 @@ public class Window
                 public void actionPerformed(ActionEvent e)
                 {
                     Window.this.debug = !Window.this.debug;
-                    Window.this.grid.repaint();
                 }
             });
 
@@ -105,7 +108,15 @@ public class Window
                 @Override
                 public void actionPerformed(ActionEvent e)
                 {
-                    Window.this.targetFrameDelta = Integer.parseInt(deltaFrameTimeTF.getText());
+                    Window.this.targetFrameDelta = Double.parseDouble(deltaFrameTimeTF.getText());
+                }
+            });
+
+            deltaTickTimeTF.addActionListener(new ActionListener() {
+                @Override
+                public void actionPerformed(ActionEvent e)
+                {
+                    Window.this.targetTickDelta = Double.parseDouble(deltaTickTimeTF.getText());
                 }
             });
 
@@ -113,9 +124,8 @@ public class Window
                 @Override
                 public void actionPerformed(ActionEvent e)
                 {
-                    Window.this.sim.resetNewGridSize(Integer.parseInt(gridSizeTF.getText()));
-                    Window.this.frameCount = 0;
-                    Window.this.grid.repaint();
+                    Window.this.reset = true;
+                    Window.this.newGridSize = Integer.parseInt(gridSizeTF.getText());
                 }
             });
 
@@ -127,14 +137,26 @@ public class Window
             add(pauseB);
             add(debugCB);
             add(deltaFrameTimeTF);
+            add(deltaTickTimeTF);
             add(gridSizeTF);
+            add(fpsL);
+            add(tpsL);
 
             // set settings for things
             debugCB.setSelected(Window.this.debug);
             gridSizeTF.setText(Integer.toString(Window.this.sim.gridSize));
             gridSizeTF.setMaximumSize(new Dimension(Integer.MAX_VALUE, gridSizeTF.getPreferredSize().height));
-            deltaFrameTimeTF.setText(Integer.toString(Window.this.targetFrameDelta));
+            deltaFrameTimeTF.setText(Double.toString(Window.this.targetFrameDelta));
             deltaFrameTimeTF.setMaximumSize(new Dimension(Integer.MAX_VALUE, deltaFrameTimeTF.getPreferredSize().height));
+            deltaTickTimeTF.setText(Double.toString(Window.this.targetTickDelta));
+            deltaTickTimeTF.setMaximumSize(new Dimension(Integer.MAX_VALUE, deltaTickTimeTF.getPreferredSize().height));
+            updateTiming(0, 0);
+        }
+
+        public void updateTiming(long fps, long tps)
+        {
+            this.fpsL.setText("FPS: " + fps);
+            this.tpsL.setText("TPS: " + tps);
         }
     }
 
@@ -146,14 +168,20 @@ public class Window
     // settings
     protected boolean debug;
     protected boolean pause;
+    protected boolean reset;
+    protected int newGridSize;
 
     // simulation loop stuff
     protected boolean running;
-    protected int frameCount;  // number of frames that have passed
-    protected int tickCount;
-    protected int targetFrameDelta; // target time between each frame
-    protected int targetTickDelta;
+    protected long frameCount;  // number of frames that have passed
+    protected long tickCount;
+    protected double targetFrameDelta; // target time between each frame
+    protected double targetTickDelta;
+    protected long fps;
+    protected long tps;
     protected ArrayList<Integer> sCounts, iCounts, rCounts;
+    private ExecutorService executor = Executors.newFixedThreadPool(NUM_THREADS);
+    private Thread[] workers = new Thread[NUM_THREADS];
 
     public Window(Simulation sim)
     {
@@ -163,11 +191,17 @@ public class Window
 
         this.running = false;
         this.pause = false;
+        this.reset = false;
+        this.newGridSize = sim.gridSize;
 
         // This will change how long each frame takes. Currently
         // set to 1000 milliseconds (1 second) per frame. Should
         // be lower later on.
-        this.targetFrameDelta = 1000;
+        this.targetFrameDelta = 16;
+        this.targetTickDelta = 1000;
+
+        this.fps = 0;
+        this.tps = 0;
 
         // setup jframe window
         frame    = new JFrame("Epidemic Simulator");
@@ -181,13 +215,58 @@ public class Window
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         frame.setLocationRelativeTo(null);
 
+        for (int i = 0; i < NUM_THREADS; i++)
+        {
+            final int tn = i;
+            workers[i] = new Thread(() -> sim.simulationStep(tn));
+        }
+
         frame.setVisible(true);
+    }
+
+    private void tick()
+    {
+        //ArrayList<Callable<Object>> tasks = new ArrayList<Callable<Object>>();
+
+        // Update grid by running simulation step
+        for (int i = 0; i < NUM_THREADS; i++)
+        {
+            // Submit tasks to executor for parallel execution
+            workers[i].run();
+            //tasks.add(Executors.callable(() -> sim.simulationStep(threadNum)));
+            //executor.submit(() -> sim.simulationStep(threadNum));
+        }
+
+        for (int i = 0; i < NUM_THREADS; i++)
+        {
+            try { workers[i].join(); } catch (Exception e) {}
+        }
+        
+
+        //try
+        //{
+        //    executor.invokeAll(tasks);
+        //}
+        //catch(Exception e)
+        //{
+        //    System.out.println(e);
+        //}
+
+        updateListCounts((int)tickCount); // Update SIR
+    }
+
+    private void update()
+    {
+        if (this.reset)
+        {
+            this.sim.reset(this.newGridSize);
+            this.reset = false;
+        }
     }
 
     // main loop for the simulation
     public void run() 
     {
-        ExecutorService executor = Executors.newFixedThreadPool(NUM_THREADS);
 
         // the initial number of infected will start with 1 but may want to be changed later.
         sim.populateGrid(1);
@@ -200,35 +279,65 @@ public class Window
         this.rCounts = new ArrayList<Integer>();
 
         long prevFrameTime = System.currentTimeMillis();
+        long frameTimer = prevFrameTime;
+        long frameTimerLast = 0;
+        long tickTimerLast = 0;
+        double tickTime = 0;
 
         while (running)
         {
             // Timing data for setting the frame rate
             long frameTime = System.currentTimeMillis();
             long deltaTime = frameTime - prevFrameTime;
+
+            // get fps and tps every second
+            if ( frameTime - frameTimer >= 1000 )
+            {
+                long frames = this.frameCount - frameTimerLast;
+                long ticks = this.tickCount - tickTimerLast;
+
+                this.fps = frames;
+                this.tps = ticks;
+
+                frameTimerLast = this.frameCount;
+                tickTimerLast = this.tickCount;
+
+                frameTimer = frameTime;
+
+                System.out.println(fps);
+                System.out.println(tps);
+            }
+
             prevFrameTime = frameTime;
 
-            // Update grid by running simulation step
-            if (!pause)
+            // do ticks
+            if ( !this.pause )
             {
-                // Submit tasks to executor for parallel execution
-                for (int i = 0; i < NUM_THREADS; i++)
+                tickTime += deltaTime;
+                while ( tickTime >= this.targetTickDelta )
                 {
-                    final int threadNum = i;
-                    executor.submit(() -> sim.simulationStep(threadNum));
+                    tick();
+                    this.tickCount += 1;
+                    tickTime -= this.targetTickDelta;
                 }
             }
-            updateListCounts(frameCount); // Update SIR
+
+            update();
             render();
 
             this.frameCount += 1;
 
             // Apply framerate cap
-            long delay = frameTime + this.targetFrameDelta - System.currentTimeMillis();
+            long delay = (long)(frameTime + this.targetFrameDelta - System.currentTimeMillis());
+
             try 
             {
-                if (delay > 0) Thread.sleep(delay);
-            } catch (InterruptedException e)
+                if (delay > 0)
+                {
+                    Thread.sleep(delay);
+                }
+            }
+            catch (InterruptedException e)
             {
                 this.running = false;
                 break;
@@ -256,5 +365,6 @@ public class Window
     public void render()
     {
         grid.repaint();
+        ((ControlPanel)controls).updateTiming(this.fps, this.tps);
     }
 }

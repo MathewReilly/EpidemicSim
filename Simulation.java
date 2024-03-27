@@ -67,7 +67,7 @@ public class Simulation
         populateGrid(1);
     }
 
-    public void resetNewGridSize(int size)
+    public void reset(int size)
     {
         // force size to be a multiple of 3
         size = size - size % 3;

@@ -192,7 +192,6 @@ public class Window
     protected long tps;
     protected ArrayList<Integer> sCounts, iCounts, rCounts;
     private ExecutorService executor = Executors.newFixedThreadPool(NUM_THREADS);
-    private Thread[] workers = new Thread[NUM_THREADS];
 
     public Window(Simulation sim)
     {
@@ -226,42 +225,32 @@ public class Window
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         frame.setLocationRelativeTo(null);
 
-        for (int i = 0; i < NUM_THREADS; i++)
-        {
-            final int tn = i;
-            workers[i] = new Thread(() -> sim.simulationStep(tn));
-        }
-
         frame.setVisible(true);
     }
 
     private void tick()
     {
-        //ArrayList<Callable<Object>> tasks = new ArrayList<Callable<Object>>();
+        ArrayList<Callable<Object>> tasks = new ArrayList<Callable<Object>>();
 
         // Update grid by running simulation step
         for (int i = 0; i < NUM_THREADS; i++)
         {
             // Submit tasks to executor for parallel execution
-            workers[i].run();
-            //tasks.add(Executors.callable(() -> sim.simulationStep(threadNum)));
+            final int threadNum = i;
+            tasks.add(Executors.callable(() -> sim.simulationStep(threadNum)));
             //executor.submit(() -> sim.simulationStep(threadNum));
         }
 
-        for (int i = 0; i < NUM_THREADS; i++)
+        java.util.List<Future<Object>> f;
+        try
         {
-            try { workers[i].join(); } catch (Exception e) {}
+            // this will run and wait for each task
+            f = executor.invokeAll(tasks);
         }
-        
-
-        //try
-        //{
-        //    executor.invokeAll(tasks);
-        //}
-        //catch(Exception e)
-        //{
-        //    System.out.println(e);
-        //}
+        catch(Exception e)
+        {
+            System.out.println(e);
+        }
 
         updateListCounts((int)tickCount); // Update SIR
     }
@@ -324,6 +313,15 @@ public class Window
                 tickTime += deltaTime;
                 while ( tickTime >= this.targetTickDelta )
                 {
+                    long tmpFrameTime = System.currentTimeMillis();
+                    long tmpDeltaTime = tmpFrameTime - prevFrameTime;
+
+                    if (tmpDeltaTime > targetFrameDelta)
+                    {
+                        tickTime -= tmpDeltaTime;
+                        break;
+                    }
+
                     tick();
                     this.tickCount += 1;
                     tickTime -= this.targetTickDelta;

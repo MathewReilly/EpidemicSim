@@ -64,6 +64,9 @@ public class Window
         private JTextField gridSizeTF;
         private JTextField deltaFrameTimeTF;
         private JTextField deltaTickTimeTF;
+        private JLabel sL;
+        private JLabel iL;
+        private JLabel rL;
         private JLabel fpsL;
         private JLabel tpsL;
 
@@ -75,6 +78,9 @@ public class Window
             deltaFrameTimeTF    = new JTextField();
             deltaTickTimeTF     = new JTextField();
             gridSizeTF          = new JTextField();
+            sL                  = new JLabel();
+            iL                  = new JLabel();
+            rL                  = new JLabel();
             fpsL                = new JLabel();
             tpsL                = new JLabel();
 
@@ -150,6 +156,11 @@ public class Window
             add(gridSizeTF);
 
             add(new JLabel(" "));
+            add(sL);
+            add(iL);
+            add(rL);
+
+            add(new JLabel(" "));
             add(fpsL);
             add(tpsL);
 
@@ -162,12 +173,20 @@ public class Window
             deltaTickTimeTF.setText(Double.toString(Window.this.targetTickDelta));
             deltaTickTimeTF.setMaximumSize(new Dimension(Integer.MAX_VALUE, deltaTickTimeTF.getPreferredSize().height));
             updateTiming(0, 0);
+            updateSIR(0, 0, 0);
         }
 
         public void updateTiming(long fps, long tps)
         {
             this.fpsL.setText("FPS: " + fps);
             this.tpsL.setText("TPS: " + tps);
+        }
+
+        public void updateSIR(int s, int i, int r)
+        {
+            this.sL.setText("S: " + s);
+            this.iL.setText("I: " + i);
+            this.rL.setText("R: " + r);
         }
     }
 
@@ -252,7 +271,8 @@ public class Window
             System.out.println(e);
         }
 
-        updateListCounts((int)tickCount); // Update SIR
+        // Update SIR
+        updateListCounts((int)tickCount);
     }
 
     private void update()
@@ -372,5 +392,12 @@ public class Window
     {
         grid.repaint();
         ((ControlPanel)controls).updateTiming(this.fps, this.tps);
+        if ( sCounts.size() > 0 )
+        {
+            ((ControlPanel)controls).updateSIR(
+                this.sCounts.get((int)tickCount - 1),
+                this.iCounts.get((int)tickCount - 1),
+                this.rCounts.get((int)tickCount - 1));
+        }
     }
 }

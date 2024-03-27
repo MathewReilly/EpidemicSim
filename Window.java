@@ -136,9 +136,20 @@ public class Window
             add(resetB);
             add(pauseB);
             add(debugCB);
+
+            add(new JLabel(" "));
+            add(new JLabel("Frame Delta:"));
             add(deltaFrameTimeTF);
+
+            add(new JLabel(" "));
+            add(new JLabel("Tick Delta:"));
             add(deltaTickTimeTF);
+
+            add(new JLabel(" "));
+            add(new JLabel("Grid Size:"));
             add(gridSizeTF);
+
+            add(new JLabel(" "));
             add(fpsL);
             add(tpsL);
 
@@ -303,9 +314,6 @@ public class Window
                 tickTimerLast = this.tickCount;
 
                 frameTimer = frameTime;
-
-                System.out.println(fps);
-                System.out.println(tps);
             }
 
             prevFrameTime = frameTime;

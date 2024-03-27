@@ -142,8 +142,6 @@ public class Simulation
     // The simulation step will take the current grid and apply changes to it.
     public void simulationStep(int threadNum) 
     {
-        
-
         Vector<LocationInformation> gridChanges = new Vector<>(borderedGridSize);
         Vector<LocationInformation> susCells = new Vector<>(borderedGridSize);
         Cell curCell;
@@ -153,47 +151,72 @@ public class Simulation
         // This section is resposible for collecting all of the changes made during this simulation step.
         // I would recommend that each of these cases set some type of grid bounds variables that can then replace grid boundery
         // information in the code from default (remocing code from default?)
+        int rowStart = 0, rowEnd = 0, colStart = 0, colEnd = 0;
         switch (threadNum) {
             case 0:
-                
+                rowStart = 0;
+                rowEnd = gridSize / 3;
+                colStart = 0;
+                colEnd = gridSize / 3;
                 break;
             case 1:
-                
+                rowStart = 0;
+                rowEnd = gridSize / 3;
+                colStart = gridSize / 3;
+                colEnd = 2 * gridSize / 3;
                 break;
             case 2:
-                
+                rowStart = 0;
+                rowEnd = gridSize / 3;
+                colStart = 2 * gridSize / 3;
+                colEnd = gridSize;
                 break;
             case 3:
-                
+                rowStart = gridSize / 3;
+                rowEnd = 2 * gridSize / 3;
+                colStart = 0;
+                colEnd = gridSize / 3;
                 break;
             case 4:
-                
+                rowStart = gridSize / 3;
+                rowEnd = 2 * gridSize / 3;
+                colStart = gridSize / 3;
+                colEnd = 2 * gridSize / 3;
                 break;
             case 5:
-                
+                rowStart = gridSize / 3;
+                rowEnd = 2 * gridSize / 3;
+                colStart = 2 * gridSize / 3;
+                colEnd = gridSize;
                 break;
             case 6:
-                
+                rowStart = 2 * gridSize / 3;
+                rowEnd = gridSize;
+                colStart = 0;
+                colEnd = gridSize / 3;
                 break;
             case 7:
-                
+                rowStart = 2 * gridSize / 3;
+                rowEnd = gridSize;
+                colStart = gridSize / 3;
+                colEnd = 2 * gridSize / 3;
                 break;
             case 8:
-                
+                rowStart = 2 * gridSize / 3;
+                rowEnd = gridSize;
+                colStart = 2 * gridSize / 3;
+                colEnd = gridSize;
                 break;
-        
-            default: // for now default will hold all of the implementation but the switch statement is in preparation for parallel.
-                
-                
-
+            default:
                 break;
         }
-
+    
         // collect all of the neighboring susceptible cells
-        for(int rows = 0; rows < gridSize; rows++)
+        for (int rows = rowStart; rows < rowEnd; rows++) 
         {
-            for(int cols = 0; cols < gridSize; cols++)
-            {
+            for (int cols = colStart; cols < colEnd; cols++) 
+            {                
+                
                 curCell = getFromGrid(rows, cols);
                 // If a cell is infected, find all susceptible neighbors. Once neighbors are found, decreate infection timer.
                 if(curCell.getState() == CellState.INFECTIOUS)

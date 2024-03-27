@@ -3,9 +3,13 @@ import java.awt.*;
 import java.awt.event.*;
 import java.awt.geom.*;
 import java.util.*;
+import java.util.concurrent.*;
 
 public class Window
 {
+
+    private static final int NUM_THREADS = 9;
+
     private class GridPanel extends JPanel
     {
         @Override
@@ -183,6 +187,8 @@ public class Window
     // main loop for the simulation
     public void run() 
     {
+        ExecutorService executor = Executors.newFixedThreadPool(NUM_THREADS);
+
         // the initial number of infected will start with 1 but may want to be changed later.
         sim.populateGrid(1);
         
@@ -197,32 +203,39 @@ public class Window
 
         while (running)
         {
-            // timing data for setting the frame rate
+            // Timing data for setting the frame rate
             long frameTime = System.currentTimeMillis();
             long deltaTime = frameTime - prevFrameTime;
             prevFrameTime = frameTime;
 
-            // update grid by running simulationstep
-            // ON the simulation step - it is likely the method that should be done in parallel, this is because the range
-            // can be given for each thread to iterate on.
+            // Update grid by running simulation step
             if (!pause)
             {
-                sim.simulationStep(-1); // -1 is used so default on switch is used
+                // Submit tasks to executor for parallel execution
+                for (int i = 0; i < NUM_THREADS; i++)
+                {
+                    final int threadNum = i;
+                    executor.submit(() -> sim.simulationStep(threadNum));
+                }
             }
             updateListCounts(frameCount); // Update SIR
-            // System.out.println("\nS: " + sCounts.get(frameCount));
-            // System.out.println("I: " + iCounts.get(frameCount));
-            // System.out.println("R: " + rCounts.get(frameCount));
-
-            // print grid to screen
             render();
 
             this.frameCount += 1;
 
-            // apply framerate cap
+            // Apply framerate cap
             long delay = frameTime + this.targetFrameDelta - System.currentTimeMillis();
-            try { if (delay > 0) Thread.sleep(delay); } catch (InterruptedException e) { this.running = false; break; }
+            try 
+            {
+                if (delay > 0) Thread.sleep(delay);
+            } catch (InterruptedException e)
+            {
+                this.running = false;
+                break;
+            }
         }
+
+        executor.shutdown();
     }
 
     // Update SIR for this frame (day)

@@ -375,9 +375,9 @@ public class Window
 
                     // if (tmpDeltaTime > targetFrameDelta)
                     // start skipping ticks at 2 fps instead of target framerate
-                    if (tmpDeltaTime > 512.0)
+                    if (tmpDeltaTime > 500.0)
                     {
-                        tickTime -= targetFrameDelta;
+                        tickTime -= 500.0;
                         break;
                     }
 

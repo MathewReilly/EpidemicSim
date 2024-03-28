@@ -62,7 +62,7 @@ public class Window
                 }
             }
 
-            //g2d.dispose();
+            g2d.dispose();
             strategy.show();
         }
     }

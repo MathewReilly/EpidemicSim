@@ -2,24 +2,32 @@ import javax.swing.*;
 import java.awt.*;
 import java.awt.event.*;
 import java.awt.geom.*;
+import java.awt.image.BufferStrategy;
 import java.util.*;
 import java.util.concurrent.*;
 
 public class Window
 {
-    private class GridPanel extends JPanel
+    private class GridPanel extends Canvas
     {
+        private BufferStrategy strategy;
+        public JPanel panel;
+
         public GridPanel()
         {
+            panel = (JPanel) Window.this.frame.getContentPane();;
+            panel.add(this);
+
             this.setIgnoreRepaint(true);
-            this.setDoubleBuffered(true);
+            this.createBufferStrategy(2);
+            strategy = getBufferStrategy();
         }
 
-        @Override
+        //@Override
         public void paintComponent(Graphics g)
         {
             //super.paintComponent(g);
-            Graphics2D g2d = (Graphics2D) g;
+            Graphics2D g2d = (Graphics2D) strategy.getDrawGraphics();
 
             // draw grid
             Dimension dim = this.getSize();
@@ -54,13 +62,8 @@ public class Window
                 }
             }
 
-            //Point a = MouseInfo.getPointerInfo().getLocation();
-            //Point b = this.getLocationOnScreen();
-            //a.x -= b.x;
-            //a.y -= b.y;
-
-            //g2d.setColor(Color.yellow);
-            //g2d.fill(new Rectangle2D.Double(a.x, a.y, 10, 10));
+            //g2d.dispose();
+            strategy.show();
         }
     }
 
@@ -223,7 +226,7 @@ public class Window
 
     private Simulation sim;
     private JFrame frame;
-    private JPanel grid;
+    private Canvas grid;
     private JPanel controls;
 
     // settings
@@ -266,18 +269,17 @@ public class Window
 
         // setup jframe window
         frame    = new JFrame("Epidemic Simulator");
-        grid     = new GridPanel();
         controls = new ControlPanel();
-
         frame.add(controls, BorderLayout.EAST);
-        frame.add(grid, BorderLayout.CENTER);
 
         frame.pack();
         frame.setSize(800, 800);
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         frame.setLocationRelativeTo(null);
-
         frame.setVisible(true);
+
+        grid = new GridPanel();
+        //frame.add(grid.panel, BorderLayout.CENTER);
     }
 
     private void tick()
@@ -371,9 +373,11 @@ public class Window
                     long tmpFrameTime = System.currentTimeMillis();
                     long tmpDeltaTime = tmpFrameTime - prevFrameTime;
 
-                    if (tmpDeltaTime > targetFrameDelta)
+                    // if (tmpDeltaTime > targetFrameDelta)
+                    // start skipping ticks at 2 fps instead of target framerate
+                    if (tmpDeltaTime > 512.0)
                     {
-                        tickTime -= tmpDeltaTime;
+                        tickTime -= targetFrameDelta;
                         break;
                     }
 

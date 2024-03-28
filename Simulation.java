@@ -277,10 +277,10 @@ public class Simulation
             updateGrid(gridChanges.elementAt(i).getRow(), gridChanges.elementAt(i).getCol(), CellState.INFECTIOUS);
         }
 
-        GetSIR();
+        //GetSIR();
     }
 
-    private void GetSIR()
+    public void GetSIR()
     {
         sCount = 0;
         iCount = 0;

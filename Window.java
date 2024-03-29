@@ -76,8 +76,11 @@ public class Window
                 @Override
                 public void actionPerformed(ActionEvent e)
                 {
+                    // Reset start values
                     Window.this.sim.reset();
                     Window.this.frameCount = 0;
+                    Window.this.curSim++;
+                    Window.this.AddSIRData();
                     Window.this.grid.repaint();
                 }
             });
@@ -153,7 +156,11 @@ public class Window
     protected int tickCount;
     protected int targetFrameDelta; // target time between each frame
     protected int targetTickDelta;
-    protected ArrayList<Integer> sCounts, iCounts, rCounts;
+    protected int curSim; // Simulation the model is currently on
+    protected int day; // Current day of simulation
+
+    // SIR values. The outer list represents the simulation #, and the inner list is the value for each day
+    protected ArrayList<ArrayList<Integer>> sCounts, iCounts, rCounts;
 
     public Window(Simulation sim)
     {
@@ -182,6 +189,15 @@ public class Window
         frame.setLocationRelativeTo(null);
 
         frame.setVisible(true);
+
+        frame.addWindowListener(new WindowAdapter() {
+            @Override
+            public void windowClosing(WindowEvent e) {
+                Window.this.EvaluateData();
+                frame.setVisible(false);
+                frame.dispose();
+            }
+            });
     }
 
     // main loop for the simulation
@@ -195,9 +211,7 @@ public class Window
         // init starting values
         this.running = true;
         this.frameCount = 0;
-        this.sCounts = new ArrayList<Integer>();
-        this.iCounts = new ArrayList<Integer>();
-        this.rCounts = new ArrayList<Integer>();
+        InitializeSIRData();
 
         long prevFrameTime = System.currentTimeMillis();
 
@@ -217,8 +231,15 @@ public class Window
                     final int threadNum = i;
                     executor.submit(() -> sim.simulationStep(threadNum));
                 }
+
+                // Update SIR values and move to next day
+                updateListCounts(); // Update SIR
+
+                // Keeps track of model metrics in terminal
+                //System.out.print("\nSim: " + (curSim+1) + ", Day: " + (day+1) + "\nS: " + sCounts.get(curSim).get(day));
+                //System.out.println("\nI: " + iCounts.get(curSim).get(day) + "\nR: " + rCounts.get(curSim).get(day));
+                day++;
             }
-            updateListCounts(frameCount); // Update SIR
             render();
 
             this.frameCount += 1;
@@ -239,22 +260,116 @@ public class Window
     }
 
     // Update SIR for this frame (day)
-    public void updateListCounts(int frameCount)
+    public void updateListCounts()
     {
-        if (sCounts.size() < frameCount+1)
+        while (sCounts.get(curSim).size() < day+1)
         {
-            sCounts.add(0);
-            iCounts.add(0);
-            rCounts.add(0);
+            sCounts.get(curSim).add(0);
+            iCounts.get(curSim).add(0);
+            rCounts.get(curSim).add(0);
         }
-        sCounts.set(frameCount, sim.sCount);
-        iCounts.set(frameCount, sim.iCount);
-        rCounts.set(frameCount, sim.rCount);
+        
+        int[] tempSIR = sim.GetSIR();
+        sCounts.get(curSim).set(day, tempSIR[0]);
+        iCounts.get(curSim).set(day,tempSIR[1]);
+        rCounts.get(curSim).set(day, tempSIR[2]);
     }
 
     // if we want to draw to the screen later
     public void render()
     {
         grid.repaint();
+    }
+
+    // Initialize variables to store SIR data
+    private void InitializeSIRData()
+    {
+        curSim = 0;
+        sCounts = new ArrayList<ArrayList<Integer>>();
+        iCounts = new ArrayList<ArrayList<Integer>>();
+        rCounts = new ArrayList<ArrayList<Integer>>();
+        AddSIRData();
+    }
+
+    // Add new list for next simulation
+    private void AddSIRData()
+    {
+        day = 0;
+        sCounts.add(new ArrayList<Integer>());
+        iCounts.add(new ArrayList<Integer>());
+        rCounts.add(new ArrayList<Integer>());
+    }
+
+    // Perform various calulations on SIR data
+    // 1. Average, Lowest, and Highest length of epidemic
+    // 2. Rate of simulations in which all cells are infected
+    public void EvaluateData()
+    {
+        int hSimLen=0, lSimLen=0, completedSims=0;
+        float avgSimLen = 0.0f, fullIRate = 0.0f;
+
+        // Loop through simulations
+        System.out.println("\nStarting Population: " + sim.GetStartingPopulation() + ", Infection Chance: " + String.format("%.2f", sim.GetInfectionChance()) + "%");
+        for (int i=0; i<=curSim; i++)
+        {
+            // Skip if simulation is empty
+            System.out.println("\nSimulation " + (i+1) + ":");
+            if (sCounts.get(i).isEmpty())
+            {
+                System.out.println("No data");
+                continue;
+            }
+
+            // Loop through days
+            int j=0;
+            do 
+            {
+                System.out.print("\tDay " + (j+1) + ":" + "\tS: " + (sCounts.get(i).get(j)));
+                System.out.println("\tI: " + iCounts.get(i).get(j) + "\tR: " + rCounts.get(i).get(j));
+                j++;
+            } while (j < iCounts.get(i).size() && iCounts.get(i).get(j-1) != 0); // until no more indices or no more infected
+
+            // Don't add to metrics if simulation wasn't completed
+            if (iCounts.get(i).get(j-1) != 0)
+            {
+                System.out.println("\tSimulation unfinished.");
+                continue;
+            }
+
+            // Calculate metrics
+            completedSims++;
+            avgSimLen += j;
+            if (i==0 || j > hSimLen)
+            {
+                hSimLen = j;
+            }
+            if (i==0 || j < lSimLen)
+            {
+                lSimLen = j;
+            }
+
+            // if all cells got infected
+            if (sCounts.get(i).get(j-1) == 0)
+            {
+                fullIRate++;
+            }
+        }
+        if (completedSims > 0)
+        {
+            avgSimLen /= (float)completedSims;
+            fullIRate /= (float)completedSims;
+        }
+
+        // Print metrics
+        System.out.println("\nCompleted simulations: " + completedSims);
+        if (completedSims == 0)
+        {
+            System.out.println("No data to evaluate.");
+            return;
+        }
+        System.out.println("Average length of epidemic: " + String.format("%.2f", avgSimLen) + " days");
+        System.out.println("Shortest epidemic: " + lSimLen + " days");
+        System.out.println("Longest epidemic: " + hSimLen + " days");
+        System.out.println("Rate in which all cells were infected: " + String.format("%.2f", (fullIRate*100)) + "%");
     }
 }

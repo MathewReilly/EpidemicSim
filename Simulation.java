@@ -23,7 +23,6 @@ public class Simulation
     final int nD = 1; // near down neighbor
 
     public Cell[][] grid;
-    public int sCount, iCount, rCount;
 
     // setup simulation
     public Simulation( int size )
@@ -34,6 +33,8 @@ public class Simulation
         this.gridSize = size;
         this.borderedGridSize = size + 8;
         this.grid = new Cell[ borderedGridSize ][ borderedGridSize ];
+        startingPopulation = size*size;
+        infectionChance = 20f;
     }
 
     // this method is largely untested and may run into errors as testing happens
@@ -265,7 +266,7 @@ public class Simulation
         // for all of the susceptible neighbors set for infection based on chance.
         for(int i = 0; i < susCells.size(); i++)
         {
-            if(Math.random() * 100 <= 20)
+            if(Math.random() * 100 <= infectionChance)
             {
                 gridChanges.add(susCells.elementAt(i));
             }
@@ -276,15 +277,13 @@ public class Simulation
         {
             updateGrid(gridChanges.elementAt(i).getRow(), gridChanges.elementAt(i).getCol(), CellState.INFECTIOUS);
         }
-
-        GetSIR();
     }
 
-    private void GetSIR()
+    // Get SIR values from this simulation step by returning an array holding
+    // S, I, and R respectively
+    public int[] GetSIR()
     {
-        sCount = 0;
-        iCount = 0;
-        rCount = 0;
+        int[] sir = {0, 0, 0};
         for(int rows = 0; rows < gridSize; rows++)
         {
             for(int cols = 0; cols < gridSize; cols++)
@@ -292,18 +291,29 @@ public class Simulation
                 Cell curCell = getFromGrid(rows, cols);
                 if (curCell.getState() == CellState.SUSCEPTIBLE)
                 {
-                    sCount++;
+                    sir[0]++;
                 }
                 else if (curCell.getState() == CellState.INFECTIOUS)
                 {
-                    iCount++;
+                    sir[1]++;
                 }
-                else
+                else if (curCell.getState() == CellState.REMOVED)
                 {
-                    rCount++;
+                    sir[2]++;
                 }
             }
         }
+
+        return sir;
+    }
+    
+    public int GetStartingPopulation()
+    {
+        return this.startingPopulation;
     }
 
+    public float GetInfectionChance()
+    {
+        return this.infectionChance;
+    }
 }

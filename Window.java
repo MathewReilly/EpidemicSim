@@ -2,22 +2,32 @@ import javax.swing.*;
 import java.awt.*;
 import java.awt.event.*;
 import java.awt.geom.*;
+import java.awt.image.BufferStrategy;
 import java.util.*;
 import java.util.concurrent.*;
 
 public class Window
 {
-
-    private static final int NUM_THREADS = 9;
-
-    private class GridPanel extends JPanel
+    private class GridPanel extends Canvas
     {
-        @Override
+        private BufferStrategy strategy;
+        public JPanel panel;
+
+        public GridPanel()
+        {
+            panel = (JPanel) Window.this.frame.getContentPane();;
+            panel.add(this);
+
+            this.setIgnoreRepaint(true);
+            this.createBufferStrategy(2);
+            strategy = getBufferStrategy();
+        }
+
+        //@Override
         public void paintComponent(Graphics g)
         {
-            super.paintComponent(g);
-            Graphics2D g2d = (Graphics2D) g;
-            g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+            //super.paintComponent(g);
+            Graphics2D g2d = (Graphics2D) strategy.getDrawGraphics();
 
             // draw grid
             Dimension dim = this.getSize();
@@ -49,10 +59,11 @@ public class Window
                     }
 
                     g2d.fill(r);
-                    g2d.setColor(Color.black);
-                    g2d.draw(r);
                 }
             }
+
+            g2d.dispose();
+            strategy.show();
         }
     }
 
@@ -72,18 +83,13 @@ public class Window
 
         public ControlPanel()
         {
-            resetB              = new JButton("Reset");
-            pauseB              = new JButton("Pause");
-            debugCB             = new JCheckBox("Show Border");
-            deltaFrameTimeTF    = new JTextField();
-            deltaTickTimeTF     = new JTextField();
-            gridSizeTF          = new JTextField();
-            sL                  = new JLabel();
-            iL                  = new JLabel();
-            rL                  = new JLabel();
-            fpsL                = new JLabel();
-            tpsL                = new JLabel();
+            setLayout(new BoxLayout(this, BoxLayout.Y_AXIS));
 
+            /*
+             * RESET BUTTON
+             */
+
+            resetB = new JButton("Reset");
             resetB.addActionListener(new ActionListener() {
                 @Override
                 public void actionPerformed(ActionEvent e)
@@ -94,7 +100,13 @@ public class Window
                     Window.this.AddSIRData();
                 }
             });
+            add(resetB);
 
+            /*
+             * PAUSE BUTTON
+             */
+
+            pauseB = new JButton("Pause");
             pauseB.addActionListener(new ActionListener() {
                 @Override
                 public void actionPerformed(ActionEvent e)
@@ -104,7 +116,14 @@ public class Window
                     pauseB.setText(s);
                 }
             });
+            add(pauseB);
 
+            /*
+             * BOARDER CHECKBOX
+             */
+
+            debugCB = new JCheckBox("Show Border");
+            debugCB.setSelected(Window.this.debug);
             debugCB.addActionListener(new ActionListener() {
                 @Override
                 public void actionPerformed(ActionEvent e)
@@ -112,7 +131,15 @@ public class Window
                     Window.this.debug = !Window.this.debug;
                 }
             });
+            add(debugCB);
 
+            /*
+             * FRAME TIME TEXT FIELD
+             */
+
+            deltaFrameTimeTF = new JTextField();
+            deltaFrameTimeTF.setText(Double.toString(Window.this.targetFrameDelta));
+            deltaFrameTimeTF.setMaximumSize(new Dimension(Integer.MAX_VALUE, deltaFrameTimeTF.getPreferredSize().height));
             deltaFrameTimeTF.addActionListener(new ActionListener() {
                 @Override
                 public void actionPerformed(ActionEvent e)
@@ -120,7 +147,17 @@ public class Window
                     Window.this.targetFrameDelta = Double.parseDouble(deltaFrameTimeTF.getText());
                 }
             });
+            add(new JLabel(" "));
+            add(new JLabel("Frame Delta:"));
+            add(deltaFrameTimeTF);
 
+            /*
+             * TICK TIME TEXT FIELD
+             */
+
+            deltaTickTimeTF = new JTextField();
+            deltaTickTimeTF.setText(Double.toString(Window.this.targetTickDelta));
+            deltaTickTimeTF.setMaximumSize(new Dimension(Integer.MAX_VALUE, deltaTickTimeTF.getPreferredSize().height));
             deltaTickTimeTF.addActionListener(new ActionListener() {
                 @Override
                 public void actionPerformed(ActionEvent e)
@@ -128,7 +165,17 @@ public class Window
                     Window.this.targetTickDelta = Double.parseDouble(deltaTickTimeTF.getText());
                 }
             });
+            add(new JLabel(" "));
+            add(new JLabel("Tick Delta:"));
+            add(deltaTickTimeTF);
 
+            /*
+             * GRID SIZE TEXT FIELD
+             */
+
+            gridSizeTF = new JTextField();
+            gridSizeTF.setText(Integer.toString(Window.this.sim.gridSize));
+            gridSizeTF.setMaximumSize(new Dimension(Integer.MAX_VALUE, gridSizeTF.getPreferredSize().height));
             gridSizeTF.addActionListener(new ActionListener() {
                 @Override
                 public void actionPerformed(ActionEvent e)
@@ -137,46 +184,33 @@ public class Window
                     Window.this.newGridSize = Integer.parseInt(gridSizeTF.getText());
                 }
             });
-
-            setLayout(new BoxLayout(this, BoxLayout.Y_AXIS));
-            //setLayout(new GridLayout(4, 1));
-
-            // add stuff to panel
-            add(resetB);
-            add(pauseB);
-            add(debugCB);
-
-            add(new JLabel(" "));
-            add(new JLabel("Frame Delta:"));
-            add(deltaFrameTimeTF);
-
-            add(new JLabel(" "));
-            add(new JLabel("Tick Delta:"));
-            add(deltaTickTimeTF);
-
             add(new JLabel(" "));
             add(new JLabel("Grid Size:"));
             add(gridSizeTF);
 
+            /*
+             * SIR LABELS
+             */
+
+            sL = new JLabel();
+            iL = new JLabel();
+            rL = new JLabel();
+            updateSIR(0, 0, 0);
             add(new JLabel(" "));
             add(sL);
             add(iL);
             add(rL);
 
+            /*
+             * FPS & TPS LABELS
+             */
+
+            fpsL = new JLabel();
+            tpsL = new JLabel();
+            updateTiming(0, 0);
             add(new JLabel(" "));
             add(fpsL);
             add(tpsL);
-
-            // set settings for things
-            debugCB.setSelected(Window.this.debug);
-            gridSizeTF.setText(Integer.toString(Window.this.sim.gridSize));
-            gridSizeTF.setMaximumSize(new Dimension(Integer.MAX_VALUE, gridSizeTF.getPreferredSize().height));
-            deltaFrameTimeTF.setText(Double.toString(Window.this.targetFrameDelta));
-            deltaFrameTimeTF.setMaximumSize(new Dimension(Integer.MAX_VALUE, deltaFrameTimeTF.getPreferredSize().height));
-            deltaTickTimeTF.setText(Double.toString(Window.this.targetTickDelta));
-            deltaTickTimeTF.setMaximumSize(new Dimension(Integer.MAX_VALUE, deltaTickTimeTF.getPreferredSize().height));
-            updateTiming(0, 0);
-            updateSIR(0, 0, 0);
         }
 
         public void updateTiming(long fps, long tps)
@@ -195,7 +229,7 @@ public class Window
 
     private Simulation sim;
     private JFrame frame;
-    private JPanel grid;
+    private Canvas grid;
     private JPanel controls;
 
     // settings
@@ -217,13 +251,15 @@ public class Window
 
     // SIR values. The outer list represents the simulation #, and the inner list is the value for each day
     protected ArrayList<ArrayList<Integer>> sCounts, iCounts, rCounts;
+
+    private static final int NUM_THREADS = 9;
     private ExecutorService executor = Executors.newFixedThreadPool(NUM_THREADS);
 
     public Window(Simulation sim)
     {
         this.sim = sim;
 
-        this.debug = true;
+        this.debug = false;
 
         this.running = false;
         this.pause = false;
@@ -241,18 +277,17 @@ public class Window
 
         // setup jframe window
         frame    = new JFrame("Epidemic Simulator");
-        grid     = new GridPanel();
         controls = new ControlPanel();
-
-        frame.add(grid, BorderLayout.CENTER);
         frame.add(controls, BorderLayout.EAST);
 
+        frame.pack();
         frame.setSize(800, 800);
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         frame.setLocationRelativeTo(null);
-
         frame.setVisible(true);
 
+        grid = new GridPanel();
+        //frame.add(grid.panel, BorderLayout.CENTER);
         frame.addWindowListener(new WindowAdapter() {
             @Override
             public void windowClosing(WindowEvent e) {
@@ -298,6 +333,7 @@ public class Window
         {
             this.sim.reset(this.newGridSize);
             this.reset = false;
+            ((ControlPanel)controls).updateSIR(0, 0, 0);
         }
     }
 
@@ -351,9 +387,11 @@ public class Window
                     long tmpFrameTime = System.currentTimeMillis();
                     long tmpDeltaTime = tmpFrameTime - prevFrameTime;
 
-                    if (tmpDeltaTime > targetFrameDelta)
+                    // if (tmpDeltaTime > targetFrameDelta)
+                    // start skipping ticks at 2 fps instead of target framerate
+                    if (tmpDeltaTime > 500.0)
                     {
-                        tickTime -= tmpDeltaTime;
+                        tickTime -= 500.0;
                         break;
                     }
 
@@ -408,7 +446,8 @@ public class Window
     // if we want to draw to the screen later
     public void render()
     {
-        grid.repaint();
+        //grid.repaint();
+        ((GridPanel)grid).paintComponent(grid.getGraphics());
         ((ControlPanel)controls).updateTiming(this.fps, this.tps);
         if ( sCounts.get(curSim).size() > 0 )
         {

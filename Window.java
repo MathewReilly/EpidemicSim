@@ -672,7 +672,7 @@ public class Window
     public void EvaluateData()
     {
         int hSimLen=0, lSimLen=0, completedSims=0;
-        float avgSimLen = 0.0f, fullIRate = 0.0f;
+        float avgSimLen = 0.0f, avgCellInf = 0.0f;
 
         // Loop through simulations
         System.out.println("\nStarting Population: " + sim.GetStartingPopulation() + ", Infection Chance: " + String.format("%.2f", sim.GetInfectionChance()) + "%");
@@ -690,8 +690,11 @@ public class Window
             int j=0;
             do 
             {
-                System.out.print("\tDay " + (j+1) + ":" + "\tS: " + (sCounts.get(i).get(j)));
-                System.out.println("\tI: " + iCounts.get(i).get(j) + "\tR: " + rCounts.get(i).get(j));
+                if (j%10 == 0)
+                {
+                    System.out.print("\tDay " + (j+1) + ":" + "\tS: " + (sCounts.get(i).get(j)));
+                    System.out.println("\tI: " + iCounts.get(i).get(j) + "\tR: " + rCounts.get(i).get(j));
+                }
                 j++;
             } while (j < iCounts.get(i).size() && iCounts.get(i).get(j-1) != 0); // until no more indices or no more infected
 
@@ -714,16 +717,12 @@ public class Window
                 lSimLen = j;
             }
 
-            // if all cells got infected
-            if (sCounts.get(i).get(j-1) == 0)
-            {
-                fullIRate++;
-            }
+            avgCellInf = avgCellInf + rCounts.get(i).get(j-1)/(float)sim.GetStartingPopulation();
         }
         if (completedSims > 0)
         {
             avgSimLen /= (float)completedSims;
-            fullIRate /= (float)completedSims;
+            avgCellInf /= (float)completedSims;
         }
 
         // Print metrics
@@ -736,6 +735,6 @@ public class Window
         System.out.println("Average length of epidemic: " + String.format("%.2f", avgSimLen) + " days");
         System.out.println("Shortest epidemic: " + lSimLen + " days");
         System.out.println("Longest epidemic: " + hSimLen + " days");
-        System.out.println("Rate in which all cells were infected: " + String.format("%.2f", (fullIRate*100)) + "%");
+        System.out.println("Average percentage of cells infected: " + String.format("%.2f", (avgCellInf*100)) + "%");
     }
 }

@@ -10,9 +10,9 @@ public class Simulation
     // Variables defining grid information
     public int gridSize;
     public int borderedGridSize;
+    public int startingPopulation;
+    public float infectionChance;
     public int communitySize;
-    private int startingPopulation;
-    private float infectionChance;
 
     // sim things - neighborModifiers, make it easy for the thread to locate neighbors in a clearer way
     final int fL = -2; // far left neighbor
@@ -87,6 +87,7 @@ public class Simulation
 
         this.gridSize = size;
         this.borderedGridSize = size + 8;
+        this.startingPopulation = size*size;
         this.grid = new Cell[communitySize][ borderedGridSize ][ borderedGridSize ];
         populateGrid(1);
     }

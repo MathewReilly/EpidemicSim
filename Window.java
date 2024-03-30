@@ -12,6 +12,12 @@ public class Window
     {
         private BufferStrategy strategy;
         public JPanel panel;
+        private Dimension dim;
+
+        // used for graph
+        private final int boarder = 100;
+        private double xScale;
+        private double yScale;
 
         public GridPanel()
         {
@@ -23,26 +29,22 @@ public class Window
             strategy = getBufferStrategy();
         }
 
-        //@Override
-        public void paintComponent(Graphics g)
+        private void drawGrid(Graphics2D g2d)
         {
-            //super.paintComponent(g);
-            Graphics2D g2d = (Graphics2D) strategy.getDrawGraphics();
-
-            // draw grid
-            Dimension dim = this.getSize();
-
             int gridSize = Window.this.debug ? Window.this.sim.borderedGridSize : Window.this.sim.gridSize;
+
             int communitySize = Window.this.sim.communitySize;
-            double w = (double) dim.width;
+            double w = (double) dim.width / (gridSize * communitySize);
             double h = (double) dim.height / gridSize;
             double cellSize = Math.min(w, h);
-            for (int com = 0; com < communitySize; com++) {
+
+            for (int com = 0; com < communitySize; com++)
+            {
                 for(int rows = 0; rows < gridSize; rows++)
                 {
                     for(int cols = 0; cols < gridSize; cols++)
                     {
-                        double x = cols * cellSize + (com * cellSize * Window.this.sim.borderedGridSize);
+                        double x = cols * cellSize + (com * cellSize * gridSize);
                         double y = rows * cellSize;
     
                         CellState cs = Window.this.debug ?
@@ -53,25 +55,119 @@ public class Window
     
                         switch (cs)
                         {
-                            case SUSCEPTIBLE: g2d.setColor(Color.blue); 
-                            break;
-                            case INFECTIOUS: g2d.setColor(Color.red);  
-                            break; 
-                            case REMOVED: g2d.setColor(Color.green); 
-                            break;
-                            case BORDER: g2d.setColor(Color.gray);  
-                            break;
-                            case LAND: g2d.setColor(Color.white);
-                            break;
+                            case CellState.SUSCEPTIBLE -> { g2d.setColor(Color.blue);  }
+                            case CellState.INFECTIOUS  -> { g2d.setColor(Color.red);   }
+                            case CellState.REMOVED     -> { g2d.setColor(Color.green); }
+                            case CellState.BORDER      -> { g2d.setColor(Color.gray);  }
+                            case CellState.LAND        -> { g2d.setColor(Color.white); }
                         }
     
                         g2d.fill(r);
-                        g2d.setColor(Color.black);
-                        g2d.draw(r);
                     }
                 }
             }
-            
+        }
+
+        private void drawHistory(Graphics2D g2d, ArrayList<Integer> history)
+        {
+            // setup graph variables
+            double prevX;
+            double prevY;
+
+            // draw line graph for S history
+            prevX = boarder;
+            prevY = history.size() > 0 ? (double)(dim.height - (history.get(0) * yScale) - boarder) : boarder;
+            for (int h : history)
+            {
+                double x = prevX + xScale;
+                double y = (double)(dim.height - (h * yScale) - boarder);
+
+                Shape l = new Line2D.Double(prevX, prevY, x, y);
+                g2d.draw(l);
+
+                prevX = x;
+                prevY = y;
+            }
+        }
+
+        private void drawGraph(Graphics2D g2d)
+        {
+            // get simulation sir data
+            ArrayList<Integer> sHistory = Window.this.sCounts.get(Window.this.curSim);
+            ArrayList<Integer> iHistory = Window.this.iCounts.get(Window.this.curSim);
+            ArrayList<Integer> rHistory = Window.this.rCounts.get(Window.this.curSim);
+
+            // get min and max height and width
+            int maxY = Window.this.day > 0 ? sHistory.get(0) : 0;
+            int minY = 0;
+
+            int maxX = Window.this.day > 0 ? sHistory.size() : 1;
+            int minX = 0;
+
+            yScale = (double)(dim.height - boarder * 2) / maxY;
+            xScale = (double)(dim.width - boarder * 2) / maxX;
+
+            // draw graph outline
+            g2d.setColor(Color.BLACK);
+            g2d.drawLine(
+                    boarder,
+                    dim.height - boarder,
+                    boarder,
+                    boarder);
+
+            g2d.drawLine(
+                    boarder,
+                    dim.height - boarder,
+                    dim.width  - boarder,
+                    dim.height - boarder);
+
+            // draw graph labels
+            String maxYS = Integer.toString(maxY);
+            String minYS = Integer.toString(minY);
+            String maxXS = Integer.toString(maxX);
+            String minXS = Integer.toString(minX);
+
+            g2d.drawString(maxYS, boarder - (maxYS.length() * 8) - 8, boarder - 8);
+            g2d.drawString(minYS, boarder - (minYS.length() * 8) + 8, dim.height - boarder + 24);
+            g2d.drawString(maxXS, dim.width - boarder, dim.height - boarder + 24);
+            g2d.drawString(minXS, boarder - (minXS.length() * 8) - 8, dim.height - boarder);
+
+            g2d.drawString("Days", dim.width / 2, dim.height - boarder + 24);
+            g2d.drawString("Population", boarder - 64, dim.height / 2);
+
+            // draw graph histories
+            g2d.setColor(Color.BLUE);
+            drawHistory(g2d, sHistory);
+
+            g2d.setColor(Color.RED);
+            drawHistory(g2d, iHistory);
+
+            g2d.setColor(Color.GREEN);
+            drawHistory(g2d, rHistory);
+        }
+
+        //@Override
+        public void paintComponent(Graphics g)
+        {
+            //super.paintComponent(g);
+            Graphics2D g2d = (Graphics2D) strategy.getDrawGraphics();
+
+            // get panel size
+            dim = this.getSize();
+
+            // clear screen
+            g2d.setColor(Color.WHITE);
+            g2d.fillRect(0, 0, dim.width, dim.height);
+
+            if (Window.this.drawGrid)
+            {
+                drawGrid(g2d);
+            }
+            else
+            {
+                drawGraph(g2d);
+            }
+
             g2d.dispose();
             strategy.show();
         }
@@ -82,12 +178,14 @@ public class Window
         private JButton resetB;
         private JButton pauseB;
         private JCheckBox debugCB;
+        private JCheckBox graphCB;
         private JTextField gridSizeTF;
         private JTextField deltaFrameTimeTF;
         private JTextField deltaTickTimeTF;
         private JLabel sL;
         private JLabel iL;
         private JLabel rL;
+        private JLabel statusL;
         private JLabel fpsL;
         private JLabel tpsL;
 
@@ -105,9 +203,6 @@ public class Window
                 public void actionPerformed(ActionEvent e)
                 {
                     Window.this.reset = true;
-                    // Reset start values
-                    Window.this.curSim++;
-                    Window.this.AddSIRData();
                 }
             });
             add(resetB);
@@ -141,7 +236,23 @@ public class Window
                     Window.this.debug = !Window.this.debug;
                 }
             });
+            add(new JLabel(" "));
             add(debugCB);
+
+            /*
+             * GRAPH CHECKBOX
+             */
+
+            graphCB = new JCheckBox("Show Graph");
+            graphCB.setSelected(Window.this.debug);
+            graphCB.addActionListener(new ActionListener() {
+                @Override
+                public void actionPerformed(ActionEvent e)
+                {
+                    Window.this.drawGrid = !Window.this.drawGrid;
+                }
+            });
+            add(graphCB);
 
             /*
              * FRAME TIME TEXT FIELD
@@ -205,11 +316,19 @@ public class Window
             sL = new JLabel();
             iL = new JLabel();
             rL = new JLabel();
-            updateSIR(0, 0, 0);
+            updateSIRLabel(0, 0, 0);
             add(new JLabel(" "));
             add(sL);
             add(iL);
             add(rL);
+
+            /*
+             * STATUS LABELS
+             */
+
+            statusL = new JLabel();
+            add(new JLabel(" "));
+            add(statusL);
 
             /*
              * FPS & TPS LABELS
@@ -217,19 +336,24 @@ public class Window
 
             fpsL = new JLabel();
             tpsL = new JLabel();
-            updateTiming(0, 0);
+            updateTimingLabel(0, 0);
             add(new JLabel(" "));
             add(fpsL);
             add(tpsL);
         }
 
-        public void updateTiming(long fps, long tps)
+        public void updateTimingLabel(long fps, long tps)
         {
             this.fpsL.setText("FPS: " + fps);
             this.tpsL.setText("TPS: " + tps);
         }
 
-        public void updateSIR(int s, int i, int r)
+        public void updateStatusLabel(String mes)
+        {
+            this.statusL.setText("Status: " + mes);
+        }
+
+        public void updateSIRLabel(int s, int i, int r)
         {
             this.sL.setText("S: " + s);
             this.iL.setText("I: " + i);
@@ -237,13 +361,22 @@ public class Window
         }
     }
 
+    private enum SimStatus
+    {
+        RUNNING,
+        PAUSED,
+        FINISHED
+    }
+
     private Simulation sim;
+    private SimStatus sStatus;
+
     private JFrame frame;
     private Canvas grid;
     private JPanel controls;
-    private double cellSize;
 
     // settings
+    protected boolean drawGrid; // will draw graph on false
     protected boolean debug;
     protected boolean pause;
     protected boolean reset;
@@ -269,9 +402,10 @@ public class Window
     public Window(Simulation sim)
     {
         this.sim = sim;
+        this.sStatus = SimStatus.RUNNING;
 
+        this.drawGrid = true;
         this.debug = false;
-
         this.running = false;
         this.pause = false;
         this.reset = false;
@@ -281,7 +415,7 @@ public class Window
         // set to 1000 milliseconds (1 second) per frame. Should
         // be lower later on.
         this.targetFrameDelta = 16;
-        this.targetTickDelta = 1000;
+        this.targetTickDelta = 20;
 
         this.fps = 0;
         this.tps = 0;
@@ -296,24 +430,27 @@ public class Window
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         frame.setLocationRelativeTo(null);
         frame.setVisible(true);
-        //Dimension dim = grid.getSize();
-        //cellSize = Math.min((double) dim.width / (sim.gridSize * sim.communitySize),
-        //        (double) dim.height / sim.gridSize);
-
-        grid = new GridPanel();
-        //frame.add(grid.panel, BorderLayout.CENTER);
+        frame.setDefaultCloseOperation(JFrame.DO_NOTHING_ON_CLOSE);
         frame.addWindowListener(new WindowAdapter() {
             @Override
-            public void windowClosing(WindowEvent e) {
-                Window.this.EvaluateData();
-                frame.setVisible(false);
-                frame.dispose();
+            public void windowClosing(WindowEvent e)
+            {
+                Window.this.cleanup();
             }
-            });
+        });
+
+        grid = new GridPanel();
+        //frame.add(grid, BorderLayout.CENTER);
     }
 
     private void tick()
     {
+        if (day > 0 && this.iCounts.get(curSim).get(day - 1) == 0)
+        {
+            this.sStatus = getSimStatus();
+            return;
+        }
+
         ArrayList<Callable<Object>> tasks = new ArrayList<Callable<Object>>();
 
         // Update grid by running simulation step
@@ -322,7 +459,6 @@ public class Window
             // Submit tasks to executor for parallel execution
             final int threadNum = i;
             tasks.add(Executors.callable(() -> sim.simulationStep(threadNum)));
-            //executor.submit(() -> sim.simulationStep(threadNum));
         }
 
         java.util.List<Future<Object>> f;
@@ -340,9 +476,19 @@ public class Window
         sim.cellMovement();
 
         // Update SIR
-        sim.GetSIR(); // maybe is better than having each thread count
         updateListCounts();
         day++;
+    }
+
+    private SimStatus getSimStatus()
+    {
+        if (this.pause)
+            return SimStatus.PAUSED;
+
+        if (day > 0 && this.iCounts.get(curSim).get(day - 1) == 0)
+            return SimStatus.FINISHED;
+
+        return SimStatus.RUNNING;
     }
 
     private void update()
@@ -350,9 +496,29 @@ public class Window
         if (this.reset)
         {
             this.sim.reset(this.newGridSize);
+            ((ControlPanel)controls).updateSIRLabel(0, 0, 0);
+
+            // Reset start values
+            Window.this.curSim++;
+            Window.this.AddSIRData();
+
             this.reset = false;
-            ((ControlPanel)controls).updateSIR(0, 0, 0);
         }
+
+        // update simulation status
+        this.sStatus = getSimStatus();
+    }
+
+    private void cleanup()
+    {
+        this.running = false;
+        frame.setVisible(false);
+        frame.dispose();
+        executor.shutdown();
+
+        // do final evaluation of simulations
+        EvaluateData();
+        System.exit(0);
     }
 
     // main loop for the simulation
@@ -420,7 +586,6 @@ public class Window
             }
 
             update();
-
             render();
 
             this.frameCount += 1;
@@ -441,8 +606,6 @@ public class Window
                 break;
             }
         }
-
-        executor.shutdown();
     }
 
     // Update SIR for this frame (tickCount)
@@ -466,13 +629,21 @@ public class Window
     {
         //grid.repaint();
         ((GridPanel)grid).paintComponent(grid.getGraphics());
-        ((ControlPanel)controls).updateTiming(this.fps, this.tps);
-        if ( sCounts.get(curSim).size() > 0 )
+        ((ControlPanel)controls).updateTimingLabel(this.fps, this.tps);
+
+        if ( curSim >= 0 && day > 0 )
         {
-            ((ControlPanel)controls).updateSIR(
-                this.sCounts.get(curSim).get(day - 1),
-                this.iCounts.get(curSim).get(day - 1),
-                this.rCounts.get(curSim).get(day - 1));
+            int s = this.sCounts.get(curSim).get(day - 1);
+            int i = this.iCounts.get(curSim).get(day - 1);
+            int r = this.rCounts.get(curSim).get(day - 1);
+            ((ControlPanel)controls).updateSIRLabel(s, i, r);
+        }
+
+        switch (sStatus)
+        {
+            case SimStatus.RUNNING  -> { ((ControlPanel)controls).updateStatusLabel("running"); }
+            case SimStatus.FINISHED -> { ((ControlPanel)controls).updateStatusLabel("finished"); }
+            case SimStatus.PAUSED   -> { ((ControlPanel)controls).updateStatusLabel("paused"); }
         }
     }
 

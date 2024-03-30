@@ -22,6 +22,10 @@ public class Cell
     {
         this.counter = counter;
     }
+    public int getCounter()
+    {
+        return counter;
+    }
 
     public int getAndDecrementCounter()
     {

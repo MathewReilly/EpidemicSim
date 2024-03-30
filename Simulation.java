@@ -57,6 +57,20 @@ public class Simulation
         }
     }
 
+    // method for keeping cell counters while also moving their location
+    public void moveSingleCell(int communitySize, int row, int col, CellState type, int counterVal)
+    {
+        Cell c = getFromGrid(communitySize, row, col);
+        c.setState(type);
+        c.setCounter(counterVal);
+
+        /*if(type == CellState.INFECTIOUS)
+        {
+            // how large should this be set to?
+            c.setCounter(14);
+        }*/
+    }
+
     // Gets a cell from a location on the grid
     // returns the actual cell as a value
     public Cell getFromGrid(int communitySize, int row, int col)
@@ -364,8 +378,9 @@ public class Simulation
                         case 1: 
                         temp = getFromGrid(com, rows, cols + nU);
                         if (temp.getState() == CellState.LAND && (current.getState() == CellState.INFECTIOUS || current.getState() == CellState.SUSCEPTIBLE)) {
-                            updateGrid(com, rows, cols + nU, current.getState());
+                            moveSingleCell(com, rows, cols + nU, current.getState(), current.getCounter());
                             current.setState(CellState.LAND);
+                            current.setCounter(0);
                             // System.out.println(move);
                         }
                         break;
@@ -373,54 +388,61 @@ public class Simulation
                         case 2:
                         temp = getFromGrid(com, rows, cols + nD);
                         if (temp.getState() == CellState.LAND&& (current.getState() == CellState.INFECTIOUS || current.getState() == CellState.SUSCEPTIBLE)) {
-                            updateGrid(com, rows, cols + nD, current.getState());
+                            moveSingleCell(com, rows, cols + nD, current.getState(), current.getCounter());
                             current.setState(CellState.LAND);
+                            current.setCounter(0);
                         }
                         break;
     
                         case 3:
                         temp = getFromGrid(com, rows + nR, cols);
                         if (temp.getState() == CellState.LAND&& (current.getState() == CellState.INFECTIOUS || current.getState() == CellState.SUSCEPTIBLE)) {
-                            updateGrid(com, rows + nR, cols, current.getState());
+                            moveSingleCell(com, rows + nR, cols, current.getState(), current.getCounter());
                             current.setState(CellState.LAND);
+                            current.setCounter(0);
                         }
                         break;
     
                         case 4:
                         temp = getFromGrid(com, rows + nL, cols);
                         if (temp.getState() == CellState.LAND&& (current.getState() == CellState.INFECTIOUS || current.getState() == CellState.SUSCEPTIBLE)) {
-                            updateGrid(com, rows + nL, cols, current.getState());
+                            moveSingleCell(com, rows + nL, cols, current.getState(), current.getCounter());
                             current.setState(CellState.LAND);
+                            current.setCounter(0);
                         }
                         break;
 
                         case 5:
                         temp = getFromGrid(com, rows + nR, cols + nU);
                         if (temp.getState() == CellState.LAND&& (current.getState() == CellState.INFECTIOUS || current.getState() == CellState.SUSCEPTIBLE)) {
-                            updateGrid(com, rows + nR, cols + nU, current.getState());
+                            moveSingleCell(com, rows + nR, cols + nU, current.getState(), current.getCounter());
                             current.setState(CellState.LAND);
+                            current.setCounter(0);
                         }
                         break;
 
                         case 6:
                         temp = getFromGrid(com, rows + nL, cols + nU);
                         if (temp.getState() == CellState.LAND&& (current.getState() == CellState.INFECTIOUS || current.getState() == CellState.SUSCEPTIBLE)) {
-                            updateGrid(com, rows + nL, cols + nU, current.getState());
+                            moveSingleCell(com, rows + nL, cols + nU, current.getState(), current.getCounter());
                             current.setState(CellState.LAND);
+                            current.setCounter(0);
                         }
                         break;
                         case 7:
                         temp = getFromGrid(com, rows + nL, cols + nD);
                         if (temp.getState() == CellState.LAND&& (current.getState() == CellState.INFECTIOUS || current.getState() == CellState.SUSCEPTIBLE)) {
-                            updateGrid(com, rows + nL, cols + nD, current.getState());
+                            moveSingleCell(com, rows + nL, cols + nD, current.getState(), current.getCounter());
                             current.setState(CellState.LAND);
+                            current.setCounter(0);
                         }
                         break;
                         case 8:
                         temp = getFromGrid(com, rows + nR, cols + nD);
                         if (temp.getState() == CellState.LAND&& (current.getState() == CellState.INFECTIOUS || current.getState() == CellState.SUSCEPTIBLE)) {
-                            updateGrid(com, rows + nR, cols + nD, current.getState());
+                            moveSingleCell(com, rows + nR, cols + nD, current.getState(), current.getCounter());
                             current.setState(CellState.LAND);
+                            current.setCounter(0);
                         }
                         break;
                         case 9:
@@ -459,11 +481,12 @@ public class Simulation
                                     if (move <= strengthOfInteraction) {
                                         temp = getFromGrid(i, rows, cols);
                                         if (temp.getState() == CellState.LAND && (current.getState() == CellState.INFECTIOUS || current.getState() == CellState.SUSCEPTIBLE)) {
-                                            updateGrid(i, rows, cols, current.getState());
+                                            moveSingleCell(i, rows, cols, current.getState(), current.getCounter());
                                             if (current.getState() == CellState.INFECTIOUS) {
                                                 // System.out.println("Infectious");
                                             }
                                             current.setState(CellState.LAND);
+                                            current.setCounter(0);
                                         }
                                     }
                                 }

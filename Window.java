@@ -32,17 +32,19 @@ public class Window
         private void drawGrid(Graphics2D g2d)
         {
             int gridSize = Window.this.debug ? Window.this.sim.borderedGridSize : Window.this.sim.gridSize;
+
             int communitySize = Window.this.sim.communitySize;
-            double w = (double) dim.width;
+            double w = (double) dim.width / gridSize;
             double h = (double) dim.height / gridSize;
             double cellSize = Math.min(w, h);
+
             for (int com = 0; com < communitySize; com++)
             {
                 for(int rows = 0; rows < gridSize; rows++)
                 {
                     for(int cols = 0; cols < gridSize; cols++)
                     {
-                        double x = cols * cellSize + (com * cellSize * Window.this.sim.borderedGridSize);
+                        double x = cols * cellSize;
                         double y = rows * cellSize;
     
                         CellState cs = Window.this.debug ?
@@ -61,8 +63,6 @@ public class Window
                         }
     
                         g2d.fill(r);
-                        g2d.setColor(Color.black);
-                        g2d.draw(r);
                     }
                 }
             }
@@ -98,7 +98,7 @@ public class Window
             ArrayList<Integer> rHistory = Window.this.rCounts.get(Window.this.curSim);
 
             // get min and max height and width
-            int maxY = Window.this.sim.startingPopulation;
+            int maxY = Window.this.day > 0 ? sHistory.get(0) : 0;
             int minY = 0;
 
             int maxX = Window.this.day > 0 ? sHistory.size() : 1;
@@ -477,7 +477,6 @@ public class Window
         sim.cellMovement();
 
         // Update SIR
-        sim.GetSIR(); // maybe is better than having each thread count
         updateListCounts();
         day++;
     }

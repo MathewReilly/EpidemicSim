@@ -383,6 +383,7 @@ public class Window
     protected int newGridSize;
 
     // simulation loop stuff
+    protected boolean isMultithreaded;
     protected boolean running;
     protected long frameCount;  // number of frames that have passed
     protected long tickCount;
@@ -453,24 +454,40 @@ public class Window
 
         ArrayList<Callable<Object>> tasks = new ArrayList<Callable<Object>>();
 
-        // Update grid by running simulation step
-        for (int i = 0; i < NUM_THREADS; i++)
-        {
-            // Submit tasks to executor for parallel execution
-            final int threadNum = i;
-            tasks.add(Executors.callable(() -> sim.simulationStep(threadNum)));
-        }
+        long multithreadedTickStart = System.nanoTime();
 
-        java.util.List<Future<Object>> f;
-        try
+        // A flag to easily test between multithreaded and non-multithreaded performance.
+        if(isMultithreaded == true)
         {
-            // this will run and wait for each task
-            f = executor.invokeAll(tasks);
-        }
-        catch(Exception e)
+            // Update grid by running simulation step
+            for (int i = 0; i < NUM_THREADS; i++)
+            {
+                // Submit tasks to executor for parallel execution
+                final int threadNum = i;
+                tasks.add(Executors.callable(() -> sim.simulationStep(threadNum)));
+            }
+
+            java.util.List<Future<Object>> f;
+            try
+            {
+                // this will run and wait for each task
+                f = executor.invokeAll(tasks);
+            }
+            catch(Exception e)
+            {
+                System.out.println(e);
+            }
+        } else
         {
-            System.out.println(e);
+            sim.simulationStep(-1);
         }
+        
+
+        long multithreadedTickFinish = System.nanoTime();
+
+        long executionTime = (multithreadedTickFinish - multithreadedTickStart);
+        sim.addSimulationStepTime(executionTime);
+        System.out.printf("AverageTime: %f nanoseconds day: %d\n", sim.getAverageSimulationStepTime(), day);
 
         // Update Cell Movement
         sim.cellMovement();
@@ -525,8 +542,9 @@ public class Window
     public void run() 
     {
 
-        // the initial number of infected will start with 1 but may want to be changed later.
+        // simulation controls
         sim.populateGrid(1);
+        this.isMultithreaded = true;
         
         // init starting values
         this.running = true;

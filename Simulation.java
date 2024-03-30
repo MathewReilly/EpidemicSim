@@ -14,6 +14,11 @@ public class Simulation
     public float infectionChance;
     public int communitySize;
 
+    // keeps track of multithreading average (in nanoseconds)
+    private double averageSimulationStepTime = 0;
+    private long totalSimulationStepTime = 0;
+    private long numSimulationSteps = 0;
+
     // sim things - neighborModifiers, make it easy for the thread to locate neighbors in a clearer way
     final int fL = -2; // far left neighbor
     final int nL = -1; // near left neighbor
@@ -27,7 +32,7 @@ public class Simulation
     // the grid and SIR variables
     public Cell[][][] grid;
     public int sCount, iCount, rCount;
-    public int[] gravityPopulation;         // ????????????????????????????????????????????????????????????????????
+    public int[] gravityPopulation;         // models gavity off the population of each community
 
     // setup simulation
     public Simulation( int size, int communitySize )
@@ -273,6 +278,10 @@ public class Simulation
                 colEnd = gridSize;
                 break;
             default:
+                rowStart = 0;
+                rowEnd = gridSize;
+                colStart = 0;
+                colEnd = gridSize;
                 break;
         }
     
@@ -362,7 +371,7 @@ public class Simulation
         int min = 1;
         int range = max - min + 1;
 
-        // For every community, each section will run the moveing cells algorithm
+        // For every community, each section will run the moving cells algorithm
         for (int com = 0; com < communitySize; com++) {
             for (int rows = 0; rows < gridSize; rows++) {
                 for (int cols = 0; cols < gridSize; cols++) {
@@ -542,4 +551,19 @@ public class Simulation
     {
         return this.infectionChance;
     }
+
+
+    public void addSimulationStepTime(long thisTicksSimulationTime)
+    {
+        totalSimulationStepTime += thisTicksSimulationTime;
+        numSimulationSteps++;
+        averageSimulationStepTime = totalSimulationStepTime / numSimulationSteps;
+    }
+
+    public double getAverageSimulationStepTime()
+    {
+        return averageSimulationStepTime;
+    }
 }
+
+

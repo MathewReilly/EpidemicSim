@@ -374,7 +374,6 @@ public class Window
     private JFrame frame;
     private Canvas grid;
     private JPanel controls;
-    private double cellSize;
 
     // settings
     protected boolean drawGrid; // will draw graph on false

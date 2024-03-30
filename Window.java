@@ -32,32 +32,38 @@ public class Window
         private void drawGrid(Graphics2D g2d)
         {
             int gridSize = Window.this.debug ? Window.this.sim.borderedGridSize : Window.this.sim.gridSize;
-            double w = (double) dim.width / gridSize;
+            int communitySize = Window.this.sim.communitySize;
+            double w = (double) dim.width;
             double h = (double) dim.height / gridSize;
             double cellSize = Math.min(w, h);
-
-            for(int rows = 0; rows < gridSize; rows++)
+            for (int com = 0; com < communitySize; com++)
             {
-                for(int cols = 0; cols < gridSize; cols++)
+                for(int rows = 0; rows < gridSize; rows++)
                 {
-                    double x = cols * cellSize;
-                    double y = rows * cellSize;
-
-                    CellState cs = Window.this.debug ?
-                        Window.this.sim.grid[rows][cols].getState() :
-                        Window.this.sim.getFromGrid(rows, cols).getState();
-
-                    Rectangle2D.Double r = new Rectangle2D.Double(x, y, cellSize, cellSize);
-
-                    switch (cs)
+                    for(int cols = 0; cols < gridSize; cols++)
                     {
-                        case CellState.SUSCEPTIBLE -> { g2d.setColor(Color.blue);  }
-                        case CellState.INFECTIOUS  -> { g2d.setColor(Color.red);   }
-                        case CellState.REMOVED     -> { g2d.setColor(Color.green); }
-                        case CellState.BORDER      -> { g2d.setColor(Color.gray);  }
+                        double x = cols * cellSize + (com * cellSize * Window.this.sim.borderedGridSize);
+                        double y = rows * cellSize;
+    
+                        CellState cs = Window.this.debug ?
+                            Window.this.sim.grid[com][rows][cols].getState() :
+                            Window.this.sim.getFromGrid(com, rows, cols).getState();
+    
+                        Rectangle2D.Double r = new Rectangle2D.Double(x, y, cellSize, cellSize);
+    
+                        switch (cs)
+                        {
+                            case CellState.SUSCEPTIBLE -> { g2d.setColor(Color.blue);  }
+                            case CellState.INFECTIOUS  -> { g2d.setColor(Color.red);   }
+                            case CellState.REMOVED     -> { g2d.setColor(Color.green); }
+                            case CellState.BORDER      -> { g2d.setColor(Color.gray);  }
+                            case CellState.LAND        -> { g2d.setColor(Color.white); }
+                        }
+    
+                        g2d.fill(r);
+                        g2d.setColor(Color.black);
+                        g2d.draw(r);
                     }
-
-                    g2d.fill(r);
                 }
             }
         }
@@ -368,6 +374,7 @@ public class Window
     private JFrame frame;
     private Canvas grid;
     private JPanel controls;
+    private double cellSize;
 
     // settings
     protected boolean drawGrid; // will draw graph on false
@@ -466,7 +473,11 @@ public class Window
             System.out.println(e);
         }
 
+        // Update Cell Movement
+        sim.cellMovement();
+
         // Update SIR
+        sim.GetSIR(); // maybe is better than having each thread count
         updateListCounts();
         day++;
     }

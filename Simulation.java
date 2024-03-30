@@ -7,10 +7,12 @@ import java.util.Vector;
 
 public class Simulation
 {
+    // Variables defining grid information
     public int gridSize;
     public int borderedGridSize;
     public int startingPopulation;
     public float infectionChance;
+    public int communitySize;
 
     // sim things - neighborModifiers, make it easy for the thread to locate neighbors in a clearer way
     final int fL = -2; // far left neighbor
@@ -22,34 +24,42 @@ public class Simulation
     final int fD = 2; // far down neighbor
     final int nD = 1; // near down neighbor
 
-    public Cell[][] grid;
+    // the grid and SIR variables
+    public Cell[][][] grid;
+    public int sCount, iCount, rCount;
+    public int[] gravityPopulation;         // ????????????????????????????????????????????????????????????????????
 
     // setup simulation
-    public Simulation( int size )
+    public Simulation( int size, int communitySize )
     {
         // force size to be a multiple of 3
         size = size - size % 3;
-
         this.gridSize = size;
         this.borderedGridSize = size + 8;
-        this.grid = new Cell[ borderedGridSize ][ borderedGridSize ];
-        this.startingPopulation = size*size;
-        this.infectionChance = 20f;
+        this.communitySize = communitySize;
+        this.gravityPopulation = new int[borderedGridSize*borderedGridSize];
+        this.grid = new Cell[communitySize][ borderedGridSize ][ borderedGridSize ];
+        startingPopulation = size*size;
+        infectionChance = 20f;
     }
 
     // this method is largely untested and may run into errors as testing happens
-    public void updateGrid(int row, int col, CellState type)
+    // Will update the current grid by changing a cell's type.
+    public void updateGrid(int communitySize, int row, int col, CellState type)
     {
-        Cell c = getFromGrid(row, col);
+        Cell c = getFromGrid(communitySize, row, col);
         c.setState(type);
 
         if(type == CellState.INFECTIOUS)
         {
-            c.setCounter(7);
+            // how large should this be set to?
+            c.setCounter(14);
         }
     }
 
-    public Cell getFromGrid(int row, int col)
+    // Gets a cell from a location on the grid
+    // returns the actual cell as a value
+    public Cell getFromGrid(int communitySize, int row, int col)
     {
         // wrap coordinates
         row = row % gridSize;
@@ -59,15 +69,17 @@ public class Simulation
         int x = (2 * ((col / split) + 1) + col);
         int y = (2 * ((row / split) + 1) + row);
 
-        return grid[y][x];
+        return grid[communitySize][y][x];
     }
 
+    // re-allocate the grid to a new cell array, start with an infected
     public void reset()
     {
-        this.grid = new Cell[ this.borderedGridSize ][ this.borderedGridSize ];
+        this.grid = new Cell[this.communitySize][ this.borderedGridSize ][ this.borderedGridSize ];
         populateGrid(1);
     }
 
+    // If you alredy have a size, reset grid using that size directly
     public void reset(int size)
     {
         // force size to be a multiple of 3
@@ -76,7 +88,7 @@ public class Simulation
         this.gridSize = size;
         this.borderedGridSize = size + 8;
         this.startingPopulation = size*size;
-        this.grid = new Cell[ borderedGridSize ][ borderedGridSize ];
+        this.grid = new Cell[communitySize][ borderedGridSize ][ borderedGridSize ];
         populateGrid(1);
     }
 
@@ -84,13 +96,20 @@ public class Simulation
     // a border and generated infected cells
     public void populateGrid(int numInitialInfected)
     {
-        for(int rows = 0; rows < borderedGridSize; rows++)
-        {
-            for(int cols = 0; cols < borderedGridSize; cols++)
+        // generates the number of "Land" cells we will have in our simulation
+        double numLand = Math.floor((borderedGridSize*borderedGridSize)/0.5);
+
+        // Generate a cell for every location in every community
+        for (int com = 0; com < communitySize; com++) {
+            for(int rows = 0; rows < borderedGridSize; rows++)
             {
-                grid[rows][cols] = new Cell();
+                for(int cols = 0; cols < borderedGridSize; cols++)
+                {
+                    grid[com][rows][cols] = new Cell();
+                }
             }
         }
+
 
         // start with border so infected cell will not be generated on that location
         // to divide up the grid, the most simple solution will be to divide it into 3rds, rounded down (by default), 
@@ -98,52 +117,82 @@ public class Simulation
         int borderLocation = borderedGridSize / 3;
         
         // creates vertical borders along the grid (marks each row at that column location)
-        for(int rows = 0; rows < borderedGridSize; rows++)
-        {
-            grid[rows][0].setState(CellState.BORDER);
-            grid[rows][1].setState(CellState.BORDER);
-
-            grid[rows][borderLocation].setState(CellState.BORDER);
-            grid[rows][borderLocation + 1].setState(CellState.BORDER);
-
-            grid[rows][2 * borderLocation].setState(CellState.BORDER);
-            grid[rows][(2 * borderLocation) + 1].setState(CellState.BORDER);
-
-            grid[rows][borderedGridSize - 2].setState(CellState.BORDER);
-            grid[rows][borderedGridSize - 1].setState(CellState.BORDER);
+        for (int com = 0; com < communitySize; com++) {
+            for(int rows = 0; rows < borderedGridSize; rows++)
+            {
+                grid[com][rows][0].setState(CellState.BORDER);
+                grid[com][rows][1].setState(CellState.BORDER);
+    
+                grid[com][rows][borderLocation].setState(CellState.BORDER);
+                grid[com][rows][borderLocation + 1].setState(CellState.BORDER);
+    
+                grid[com][rows][2 * borderLocation].setState(CellState.BORDER);
+                grid[com][rows][(2 * borderLocation) + 1].setState(CellState.BORDER);
+    
+                grid[com][rows][borderedGridSize - 2].setState(CellState.BORDER);
+                grid[com][rows][borderedGridSize - 1].setState(CellState.BORDER);
+            }
+    
+            // creates horizonral borders along the grid (marks each column at that row's location)
+            for(int cols = 0; cols < borderedGridSize; cols++)
+            {
+                grid[com][0][cols].setState(CellState.BORDER);
+                grid[com][1][cols].setState(CellState.BORDER);
+    
+                grid[com][borderLocation][cols].setState(CellState.BORDER);
+                grid[com][borderLocation + 1][cols].setState(CellState.BORDER);
+    
+                grid[com][2 * borderLocation][cols].setState(CellState.BORDER);
+                grid[com][(2 * borderLocation) + 1][cols].setState(CellState.BORDER);
+    
+                grid[com][borderedGridSize - 2][cols].setState(CellState.BORDER);
+                grid[com][borderedGridSize - 1][cols].setState(CellState.BORDER);
+            }
         }
 
-        // creates horizonral borders along the grid (marks each column at that row's location)
-        for(int cols = 0; cols < borderedGridSize; cols++)
-        {
-            grid[0][cols].setState(CellState.BORDER);
-            grid[1][cols].setState(CellState.BORDER);
+        // this next section focuses on infecting random cells at the start
+        // pick initial cell to infect
+        int row = (int)(Math.random() * gridSize);
+        int col = (int)(Math.random() * gridSize);
+        int com = (int)(Math.random() * communitySize);
+        Cell curCell = getFromGrid(com, row, col);
+        // row = (int)(Math.random() * gridSize);       // is this repetitive to above?
+        // col = (int)(Math.random() * gridSize);       // removing this section didn't appear to make a difference
+        // com = (int)(Math.random() * communitySize);
+        // curCell = getFromGrid(com, row, col);
 
-            grid[borderLocation][cols].setState(CellState.BORDER);
-            grid[borderLocation + 1][cols].setState(CellState.BORDER);
-
-            grid[2 * borderLocation][cols].setState(CellState.BORDER);
-            grid[(2 * borderLocation) + 1][cols].setState(CellState.BORDER);
-
-            grid[borderedGridSize - 2][cols].setState(CellState.BORDER);
-            grid[borderedGridSize - 1][cols].setState(CellState.BORDER);
+        // while we have yet to reach our number of inactive "land" cells (serving as natural separations of cells),
+        // mark cells on the map.
+        int counter = 0;
+        while (counter != numLand) {
+            row = (int)(Math.random() * gridSize);
+            col = (int)(Math.random() * gridSize);
+            com = (int)(Math.random() * communitySize);
+            
+            updateGrid(com, row, col, CellState.LAND);
+            counter++;
         }
 
-        // infect random cells at the start
-        int row = 0;
-        int col = 0;
-        for(int i = 0; i < numInitialInfected; i++)
+        // for the cell we want to infect, make sure it is not a land or border cell initially
+        while(curCell.getState() == CellState.LAND || curCell.getState() == CellState.BORDER)
         {
             row = (int)(Math.random() * gridSize);
             col = (int)(Math.random() * gridSize);
+            com = (int)(Math.random() * communitySize);
+            curCell = getFromGrid(com, row, col);
+            
+        }
 
-            updateGrid(row, col, CellState.INFECTIOUS);
+        // set a susceptible cell to be infectious.
+        if (curCell.getState() == CellState.SUSCEPTIBLE) {
+            updateGrid(com, row, col, CellState.INFECTIOUS);
         }
     }
 
     // The simulation step will take the current grid and apply changes to it.
     public void simulationStep(int threadNum) 
     {
+        // current cell and changing cell variables
         Vector<LocationInformation> gridChanges = new Vector<>(borderedGridSize);
         Vector<LocationInformation> susCells = new Vector<>(borderedGridSize);
         Cell curCell;
@@ -214,56 +263,58 @@ public class Simulation
         }
     
         // collect all of the neighboring susceptible cells
-        for (int rows = rowStart; rows < rowEnd; rows++) 
-        {
-            for (int cols = colStart; cols < colEnd; cols++) 
-            {                
+        for (int com = 0; com < communitySize; com++) {
+            for (int rows = rowStart; rows < rowEnd; rows++) 
+            {
+                for (int cols = colStart; cols < colEnd; cols++) 
+                {                
                 
-                curCell = getFromGrid(rows, cols);
-                // If a cell is infected, find all susceptible neighbors. Once neighbors are found, decreate infection timer.
-                if(curCell.getState() == CellState.INFECTIOUS)
-                {
-                    // upper-left neighbor
-                    neighborCell = getFromGrid(rows + nL, cols + nU);
-                    if(neighborCell.getState() == CellState.SUSCEPTIBLE) {susCells.add(new LocationInformation(rows + nL, cols + nU));}
-
-                    // upper neighbor
-                    neighborCell = getFromGrid(rows, cols + nU);
-                    if(neighborCell.getState() == CellState.SUSCEPTIBLE) {susCells.add(new LocationInformation(rows, cols + nU));}
-
-                    // upper-right neighbor
-                    neighborCell = getFromGrid(rows + nR, cols + nU);
-                    if(neighborCell.getState() == CellState.SUSCEPTIBLE) {susCells.add(new LocationInformation(rows + nR, cols + nU));}
-
-                    // left neighbor
-                    neighborCell = getFromGrid(rows + nL, cols);
-                    if(neighborCell.getState() == CellState.SUSCEPTIBLE) {susCells.add(new LocationInformation(rows + nL, cols));}
-
-                    // right neighbor
-                    neighborCell = getFromGrid(rows + nR, cols);
-                    if(neighborCell.getState() == CellState.SUSCEPTIBLE) {susCells.add(new LocationInformation(rows + nR, cols));}
-
-                    // down-left neighbor
-                    neighborCell = getFromGrid(rows + nL, cols + nD);
-                    if(neighborCell.getState() == CellState.SUSCEPTIBLE) {susCells.add(new LocationInformation(rows + nL, cols + nD));}
-
-                    // down neighbor
-                    neighborCell = getFromGrid(rows, cols + nD);
-                    if(neighborCell.getState() == CellState.SUSCEPTIBLE) {susCells.add(new LocationInformation(rows, cols + nD));}
-
-                    // down-right nieghbor
-                    neighborCell = getFromGrid(rows + nR, cols + nD);
-                    if(neighborCell.getState() == CellState.SUSCEPTIBLE) {susCells.add(new LocationInformation(rows + nR, cols + nD));}
-
-                    // get the amount of time left of infectiousness, if it is no longer infectious remove it.
-                    if(curCell.getAndDecrementCounter() == 1)
+                    curCell = getFromGrid(com, rows, cols);
+                    // If a cell is infected, find all susceptible neighbors. Once neighbors are found, decreate infection timer.
+                    if(curCell.getState() == CellState.INFECTIOUS)
                     {
-                        curCell.setState(CellState.REMOVED);
+                        // upper-left neighbor
+                        neighborCell = getFromGrid(com, rows + nL, cols + nU);
+                        if(neighborCell.getState() == CellState.SUSCEPTIBLE) {susCells.add(new LocationInformation(com, rows + nL, cols + nU));}
+    
+                        // upper neighbor
+                        neighborCell = getFromGrid(com, rows, cols + nU);
+                        if(neighborCell.getState() == CellState.SUSCEPTIBLE) {susCells.add(new LocationInformation(com, rows, cols + nU));}
+    
+                        // upper-right neighbor
+                        neighborCell = getFromGrid(com, rows + nR, cols + nU);
+                        if(neighborCell.getState() == CellState.SUSCEPTIBLE) {susCells.add(new LocationInformation(com, rows + nR, cols + nU));}
+    
+                        // left neighbor
+                        neighborCell = getFromGrid(com, rows + nL, cols);
+                        if(neighborCell.getState() == CellState.SUSCEPTIBLE) {susCells.add(new LocationInformation(com, rows + nL, cols));}
+    
+                        // right neighbor
+                        neighborCell = getFromGrid(com, rows + nR, cols);
+                        if(neighborCell.getState() == CellState.SUSCEPTIBLE) {susCells.add(new LocationInformation(com, rows + nR, cols));}
+    
+                        // down-left neighbor
+                        neighborCell = getFromGrid(com, rows + nL, cols + nD);
+                        if(neighborCell.getState() == CellState.SUSCEPTIBLE) {susCells.add(new LocationInformation(com, rows + nL, cols + nD));}
+    
+                        // down neighbor
+                        neighborCell = getFromGrid(com, rows, cols + nD);
+                        if(neighborCell.getState() == CellState.SUSCEPTIBLE) {susCells.add(new LocationInformation(com, rows, cols + nD));}
+    
+                        // down-right nieghbor
+                        neighborCell = getFromGrid(com, rows + nR, cols + nD);
+                        if(neighborCell.getState() == CellState.SUSCEPTIBLE) {susCells.add(new LocationInformation(com, rows + nR, cols + nD));}
+    
+                        // get the amount of time left of infectiousness, if it is no longer infectious remove it.
+                        if(curCell.getAndDecrementCounter() == 1)
+                        {
+                            curCell.setState(CellState.REMOVED);
+                        }
                     }
                 }
             }
         }
-
+        
         // for all of the susceptible neighbors set for infection based on chance.
         for(int i = 0; i < susCells.size(); i++)
         {
@@ -272,11 +323,160 @@ public class Simulation
                 gridChanges.add(susCells.elementAt(i));
             }
         }
-
+        
         // Update grid with all new infections.
         for(int i = 0; i < gridChanges.size(); i++)
         {
-            updateGrid(gridChanges.elementAt(i).getRow(), gridChanges.elementAt(i).getCol(), CellState.INFECTIOUS);
+            for(int j = 0; j < borderedGridSize*borderedGridSize; j++) {
+                gravityPopulation[j] = 0;
+            }
+            updateGrid(gridChanges.elementAt(i).getCom(), gridChanges.elementAt(i).getRow(), gridChanges.elementAt(i).getCol(), CellState.INFECTIOUS);
+            gravityPopulation[gridChanges.elementAt(i).getCom()]++;
+        }
+
+        
+        // maybe move to a unique SIR total and have each thread calculate individually?
+        // is this a race condition to access or are copies made for eacth thread?
+        // or maybe calculate under window's tick method, as a final separate step <- currently trying this
+        //GetSIR();
+    }
+
+    public void cellMovement()
+    {
+        // Once infections are calculated, cells will move around the land
+        int max = 9;
+        int min = 1;
+        int range = max - min + 1;
+
+        // For every community, each section will run the moveing cells algorithm
+        for (int com = 0; com < communitySize; com++) {
+            for (int rows = 0; rows < gridSize; rows++) {
+                for (int cols = 0; cols < gridSize; cols++) {
+                    
+                    // gather a random chance to move to a neighboring position
+                    int move = (int)(Math.random() * range) + min;
+                    Cell temp;
+                    Cell current = getFromGrid(com, rows, cols);
+
+                    // When a new position is available, set that as the new cells position, and set the currrent location to land
+                    // If a cell remains in a spot, pull neighboring cells closer to form a community
+                    switch(move) {
+                        case 1: 
+                        temp = getFromGrid(com, rows, cols + nU);
+                        if (temp.getState() == CellState.LAND && (current.getState() == CellState.INFECTIOUS || current.getState() == CellState.SUSCEPTIBLE)) {
+                            updateGrid(com, rows, cols + nU, current.getState());
+                            current.setState(CellState.LAND);
+                            // System.out.println(move);
+                        }
+                        break;
+    
+                        case 2:
+                        temp = getFromGrid(com, rows, cols + nD);
+                        if (temp.getState() == CellState.LAND&& (current.getState() == CellState.INFECTIOUS || current.getState() == CellState.SUSCEPTIBLE)) {
+                            updateGrid(com, rows, cols + nD, current.getState());
+                            current.setState(CellState.LAND);
+                        }
+                        break;
+    
+                        case 3:
+                        temp = getFromGrid(com, rows + nR, cols);
+                        if (temp.getState() == CellState.LAND&& (current.getState() == CellState.INFECTIOUS || current.getState() == CellState.SUSCEPTIBLE)) {
+                            updateGrid(com, rows + nR, cols, current.getState());
+                            current.setState(CellState.LAND);
+                        }
+                        break;
+    
+                        case 4:
+                        temp = getFromGrid(com, rows + nL, cols);
+                        if (temp.getState() == CellState.LAND&& (current.getState() == CellState.INFECTIOUS || current.getState() == CellState.SUSCEPTIBLE)) {
+                            updateGrid(com, rows + nL, cols, current.getState());
+                            current.setState(CellState.LAND);
+                        }
+                        break;
+
+                        case 5:
+                        temp = getFromGrid(com, rows + nR, cols + nU);
+                        if (temp.getState() == CellState.LAND&& (current.getState() == CellState.INFECTIOUS || current.getState() == CellState.SUSCEPTIBLE)) {
+                            updateGrid(com, rows + nR, cols + nU, current.getState());
+                            current.setState(CellState.LAND);
+                        }
+                        break;
+
+                        case 6:
+                        temp = getFromGrid(com, rows + nL, cols + nU);
+                        if (temp.getState() == CellState.LAND&& (current.getState() == CellState.INFECTIOUS || current.getState() == CellState.SUSCEPTIBLE)) {
+                            updateGrid(com, rows + nL, cols + nU, current.getState());
+                            current.setState(CellState.LAND);
+                        }
+                        break;
+                        case 7:
+                        temp = getFromGrid(com, rows + nL, cols + nD);
+                        if (temp.getState() == CellState.LAND&& (current.getState() == CellState.INFECTIOUS || current.getState() == CellState.SUSCEPTIBLE)) {
+                            updateGrid(com, rows + nL, cols + nD, current.getState());
+                            current.setState(CellState.LAND);
+                        }
+                        break;
+                        case 8:
+                        temp = getFromGrid(com, rows + nR, cols + nD);
+                        if (temp.getState() == CellState.LAND&& (current.getState() == CellState.INFECTIOUS || current.getState() == CellState.SUSCEPTIBLE)) {
+                            updateGrid(com, rows + nR, cols + nD, current.getState());
+                            current.setState(CellState.LAND);
+                        }
+                        break;
+                        case 9:
+                        // System.out.println(com);
+                        if (gravityPopulation[com] != 0) {
+                            int currentCommunityPopulation = gravityPopulation[com];
+                            for (int i = 0; i < communitySize; i++) {
+                                if (i != com) {
+                                    int nextCommunityPopulation = gravityPopulation[i];
+                                    int populationMultiple = currentCommunityPopulation * nextCommunityPopulation;
+                                    int distanceBetween = Math.abs(currentCommunityPopulation - nextCommunityPopulation);
+                                    double strengthOfInteraction;
+                                    // int totalDistance;
+                                    // int size; 
+                                    // switch(distanceBetween) {
+                                    //     case 1:
+                                    //     case 3: 
+                                    //     case 4:
+                                    //     size = gridSize;
+                                    //     totalDistance = (int)Math.pow(size, 2);
+                                    //     strengthOfInteraction = populationMultiple/totalDistance;
+                                    //     break;
+                                    //     case 5:
+                                    //     case 6:
+                                    //     size = gridSize;
+                                    //     totalDistance = (int)Math.pow(size, 2);
+                                    //     strengthOfInteraction = populationMultiple/totalDistance;
+                                    //     break;
+                                    // }
+                                    strengthOfInteraction = populationMultiple/((double)Math.pow((borderedGridSize*distanceBetween),2)+1);
+                                    max = 100;
+                                    min = 0;
+                                    range = max - min + 1;
+                                    strengthOfInteraction *= 100;
+                                    move = (int)(Math.random() * range) + min;
+                                    if (move <= strengthOfInteraction) {
+                                        temp = getFromGrid(i, rows, cols);
+                                        if (temp.getState() == CellState.LAND && (current.getState() == CellState.INFECTIOUS || current.getState() == CellState.SUSCEPTIBLE)) {
+                                            updateGrid(i, rows, cols, current.getState());
+                                            if (current.getState() == CellState.INFECTIOUS) {
+                                                // System.out.println("Infectious");
+                                            }
+                                            current.setState(CellState.LAND);
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        break;
+    
+                        default:
+                        break;
+                        
+                    }
+                }
+            }
         }
     }
 
@@ -285,22 +485,24 @@ public class Simulation
     public int[] GetSIR()
     {
         int[] sir = {0, 0, 0};
-        for(int rows = 0; rows < gridSize; rows++)
-        {
-            for(int cols = 0; cols < gridSize; cols++)
+        for (int com = 0; com < communitySize; com++) {
+            for(int rows = 0; rows < gridSize; rows++)
             {
-                Cell curCell = getFromGrid(rows, cols);
-                if (curCell.getState() == CellState.SUSCEPTIBLE)
+                for(int cols = 0; cols < gridSize; cols++)
                 {
-                    sir[0]++;
-                }
-                else if (curCell.getState() == CellState.INFECTIOUS)
-                {
-                    sir[1]++;
-                }
-                else if (curCell.getState() == CellState.REMOVED)
-                {
-                    sir[2]++;
+                    Cell curCell = getFromGrid(com, rows, cols);
+                    if (curCell.getState() == CellState.SUSCEPTIBLE)
+                    {
+                        sir[0]++;
+                    }
+                    else if (curCell.getState() == CellState.INFECTIOUS)
+                    {
+                        sir[1]++;
+                    } 
+                    else if (curCell.getState() == CellState.REMOVED) if (curCell.getState() == CellState.REMOVED)
+                    {
+                        sir[2]++;
+                    }
                 }
             }
         }

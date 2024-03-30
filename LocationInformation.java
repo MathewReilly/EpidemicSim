@@ -1,12 +1,14 @@
 public class LocationInformation {
   private int row;
   private int col;
+  private int com;
   //private CellState type;
 
-  public LocationInformation(int row, int col)
+  public LocationInformation(int com, int row, int col)
   {
-      this.row = row;
-      this.col = col;
+    this.com = com;
+    this.row = row;
+    this.col = col;
      // this.type = type;
   }
 
@@ -18,6 +20,11 @@ public class LocationInformation {
   public int getCol()
   {
     return col;
+  }
+
+  public int getCom()
+  {
+    return com;
   }
 
   /*public CellState getType()

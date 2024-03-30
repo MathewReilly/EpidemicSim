@@ -23,36 +23,45 @@ public class Window
             Dimension dim = this.getSize();
 
             int gridSize = Window.this.debug ? Window.this.sim.borderedGridSize : Window.this.sim.gridSize;
-            double w = (double) dim.width / gridSize;
+            int communitySize = Window.this.sim.communitySize;
+            double w = (double) dim.width;
             double h = (double) dim.height / gridSize;
             double cellSize = Math.min(w, h);
-
-            for(int rows = 0; rows < gridSize; rows++)
-            {
-                for(int cols = 0; cols < gridSize; cols++)
+            for (int com = 0; com < communitySize; com++) {
+                for(int rows = 0; rows < gridSize; rows++)
                 {
-                    double x = cols * cellSize;
-                    double y = rows * cellSize;
-
-                    CellState cs = Window.this.debug ?
-                        Window.this.sim.grid[rows][cols].getState() :
-                        Window.this.sim.getFromGrid(rows, cols).getState();
-
-                    Rectangle2D.Double r = new Rectangle2D.Double(x, y, cellSize, cellSize);
-
-                    switch (cs)
+                    for(int cols = 0; cols < gridSize; cols++)
                     {
-                        case CellState.SUSCEPTIBLE -> { g2d.setColor(Color.blue);  } 
-                        case CellState.INFECTIOUS  -> { g2d.setColor(Color.red);   }
-                        case CellState.REMOVED     -> { g2d.setColor(Color.green); }
-                        case CellState.BORDER      -> { g2d.setColor(Color.gray);  }
+                        double x = cols * cellSize + (com * cellSize * Window.this.sim.borderedGridSize);
+                        double y = rows * cellSize;
+    
+                        CellState cs = Window.this.debug ?
+                            Window.this.sim.grid[com][rows][cols].getState() :
+                            Window.this.sim.getFromGrid(com, rows, cols).getState();
+    
+                        Rectangle2D.Double r = new Rectangle2D.Double(x, y, cellSize, cellSize);
+    
+                        switch (cs)
+                        {
+                            case SUSCEPTIBLE: g2d.setColor(Color.blue); 
+                            break;
+                            case INFECTIOUS: g2d.setColor(Color.red);  
+                            break; 
+                            case REMOVED: g2d.setColor(Color.green); 
+                            break;
+                            case BORDER: g2d.setColor(Color.gray);  
+                            break;
+                            case LAND: g2d.setColor(Color.white);
+                            break;
+                        }
+    
+                        g2d.fill(r);
+                        g2d.setColor(Color.black);
+                        g2d.draw(r);
                     }
-
-                    g2d.fill(r);
-                    g2d.setColor(Color.black);
-                    g2d.draw(r);
                 }
             }
+            
         }
     }
 
@@ -194,6 +203,7 @@ public class Window
     private JFrame frame;
     private JPanel grid;
     private JPanel controls;
+    private double cellSize;
 
     // settings
     protected boolean debug;
@@ -245,6 +255,9 @@ public class Window
         frame.setLocationRelativeTo(null);
 
         frame.setVisible(true);
+        Dimension dim = grid.getSize();
+        cellSize = Math.min((double) dim.width / (sim.gridSize * sim.communitySize),
+                (double) dim.height / sim.gridSize);
     }
 
     private void tick()
@@ -272,6 +285,7 @@ public class Window
         }
 
         // Update SIR
+        sim.GetSIR(); // maybe is better than having each thread count
         updateListCounts((int)tickCount);
     }
 

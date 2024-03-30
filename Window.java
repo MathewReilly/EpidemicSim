@@ -2,22 +2,32 @@ import javax.swing.*;
 import java.awt.*;
 import java.awt.event.*;
 import java.awt.geom.*;
+import java.awt.image.BufferStrategy;
 import java.util.*;
 import java.util.concurrent.*;
 
 public class Window
 {
-
-    private static final int NUM_THREADS = 9;
-
-    private class GridPanel extends JPanel
+    private class GridPanel extends Canvas
     {
-        @Override
+        private BufferStrategy strategy;
+        public JPanel panel;
+
+        public GridPanel()
+        {
+            panel = (JPanel) Window.this.frame.getContentPane();;
+            panel.add(this);
+
+            this.setIgnoreRepaint(true);
+            this.createBufferStrategy(2);
+            strategy = getBufferStrategy();
+        }
+
+        //@Override
         public void paintComponent(Graphics g)
         {
-            super.paintComponent(g);
-            Graphics2D g2d = (Graphics2D) g;
-            g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+            //super.paintComponent(g);
+            Graphics2D g2d = (Graphics2D) strategy.getDrawGraphics();
 
             // draw grid
             Dimension dim = this.getSize();
@@ -62,6 +72,8 @@ public class Window
                 }
             }
             
+            g2d.dispose();
+            strategy.show();
         }
     }
 
@@ -81,26 +93,30 @@ public class Window
 
         public ControlPanel()
         {
-            resetB              = new JButton("Reset");
-            pauseB              = new JButton("Pause");
-            debugCB             = new JCheckBox("Show Border");
-            deltaFrameTimeTF    = new JTextField();
-            deltaTickTimeTF     = new JTextField();
-            gridSizeTF          = new JTextField();
-            sL                  = new JLabel();
-            iL                  = new JLabel();
-            rL                  = new JLabel();
-            fpsL                = new JLabel();
-            tpsL                = new JLabel();
+            setLayout(new BoxLayout(this, BoxLayout.Y_AXIS));
 
+            /*
+             * RESET BUTTON
+             */
+
+            resetB = new JButton("Reset");
             resetB.addActionListener(new ActionListener() {
                 @Override
                 public void actionPerformed(ActionEvent e)
                 {
                     Window.this.reset = true;
+                    // Reset start values
+                    Window.this.curSim++;
+                    Window.this.AddSIRData();
                 }
             });
+            add(resetB);
 
+            /*
+             * PAUSE BUTTON
+             */
+
+            pauseB = new JButton("Pause");
             pauseB.addActionListener(new ActionListener() {
                 @Override
                 public void actionPerformed(ActionEvent e)
@@ -110,7 +126,14 @@ public class Window
                     pauseB.setText(s);
                 }
             });
+            add(pauseB);
 
+            /*
+             * BOARDER CHECKBOX
+             */
+
+            debugCB = new JCheckBox("Show Border");
+            debugCB.setSelected(Window.this.debug);
             debugCB.addActionListener(new ActionListener() {
                 @Override
                 public void actionPerformed(ActionEvent e)
@@ -118,7 +141,15 @@ public class Window
                     Window.this.debug = !Window.this.debug;
                 }
             });
+            add(debugCB);
 
+            /*
+             * FRAME TIME TEXT FIELD
+             */
+
+            deltaFrameTimeTF = new JTextField();
+            deltaFrameTimeTF.setText(Double.toString(Window.this.targetFrameDelta));
+            deltaFrameTimeTF.setMaximumSize(new Dimension(Integer.MAX_VALUE, deltaFrameTimeTF.getPreferredSize().height));
             deltaFrameTimeTF.addActionListener(new ActionListener() {
                 @Override
                 public void actionPerformed(ActionEvent e)
@@ -126,7 +157,17 @@ public class Window
                     Window.this.targetFrameDelta = Double.parseDouble(deltaFrameTimeTF.getText());
                 }
             });
+            add(new JLabel(" "));
+            add(new JLabel("Frame Delta:"));
+            add(deltaFrameTimeTF);
 
+            /*
+             * TICK TIME TEXT FIELD
+             */
+
+            deltaTickTimeTF = new JTextField();
+            deltaTickTimeTF.setText(Double.toString(Window.this.targetTickDelta));
+            deltaTickTimeTF.setMaximumSize(new Dimension(Integer.MAX_VALUE, deltaTickTimeTF.getPreferredSize().height));
             deltaTickTimeTF.addActionListener(new ActionListener() {
                 @Override
                 public void actionPerformed(ActionEvent e)
@@ -134,7 +175,17 @@ public class Window
                     Window.this.targetTickDelta = Double.parseDouble(deltaTickTimeTF.getText());
                 }
             });
+            add(new JLabel(" "));
+            add(new JLabel("Tick Delta:"));
+            add(deltaTickTimeTF);
 
+            /*
+             * GRID SIZE TEXT FIELD
+             */
+
+            gridSizeTF = new JTextField();
+            gridSizeTF.setText(Integer.toString(Window.this.sim.gridSize));
+            gridSizeTF.setMaximumSize(new Dimension(Integer.MAX_VALUE, gridSizeTF.getPreferredSize().height));
             gridSizeTF.addActionListener(new ActionListener() {
                 @Override
                 public void actionPerformed(ActionEvent e)
@@ -143,46 +194,33 @@ public class Window
                     Window.this.newGridSize = Integer.parseInt(gridSizeTF.getText());
                 }
             });
-
-            setLayout(new BoxLayout(this, BoxLayout.Y_AXIS));
-            //setLayout(new GridLayout(4, 1));
-
-            // add stuff to panel
-            add(resetB);
-            add(pauseB);
-            add(debugCB);
-
-            add(new JLabel(" "));
-            add(new JLabel("Frame Delta:"));
-            add(deltaFrameTimeTF);
-
-            add(new JLabel(" "));
-            add(new JLabel("Tick Delta:"));
-            add(deltaTickTimeTF);
-
             add(new JLabel(" "));
             add(new JLabel("Grid Size:"));
             add(gridSizeTF);
 
+            /*
+             * SIR LABELS
+             */
+
+            sL = new JLabel();
+            iL = new JLabel();
+            rL = new JLabel();
+            updateSIR(0, 0, 0);
             add(new JLabel(" "));
             add(sL);
             add(iL);
             add(rL);
 
+            /*
+             * FPS & TPS LABELS
+             */
+
+            fpsL = new JLabel();
+            tpsL = new JLabel();
+            updateTiming(0, 0);
             add(new JLabel(" "));
             add(fpsL);
             add(tpsL);
-
-            // set settings for things
-            debugCB.setSelected(Window.this.debug);
-            gridSizeTF.setText(Integer.toString(Window.this.sim.gridSize));
-            gridSizeTF.setMaximumSize(new Dimension(Integer.MAX_VALUE, gridSizeTF.getPreferredSize().height));
-            deltaFrameTimeTF.setText(Double.toString(Window.this.targetFrameDelta));
-            deltaFrameTimeTF.setMaximumSize(new Dimension(Integer.MAX_VALUE, deltaFrameTimeTF.getPreferredSize().height));
-            deltaTickTimeTF.setText(Double.toString(Window.this.targetTickDelta));
-            deltaTickTimeTF.setMaximumSize(new Dimension(Integer.MAX_VALUE, deltaTickTimeTF.getPreferredSize().height));
-            updateTiming(0, 0);
-            updateSIR(0, 0, 0);
         }
 
         public void updateTiming(long fps, long tps)
@@ -201,7 +239,7 @@ public class Window
 
     private Simulation sim;
     private JFrame frame;
-    private JPanel grid;
+    private Canvas grid;
     private JPanel controls;
     private double cellSize;
 
@@ -219,14 +257,20 @@ public class Window
     protected double targetTickDelta;
     protected long fps;
     protected long tps;
-    protected ArrayList<Integer> sCounts, iCounts, rCounts;
+    protected int curSim; // Simulation the model is currently on
+    protected int day; // Current day of simulation
+
+    // SIR values. The outer list represents the simulation #, and the inner list is the value for each day
+    protected ArrayList<ArrayList<Integer>> sCounts, iCounts, rCounts;
+
+    private static final int NUM_THREADS = 9;
     private ExecutorService executor = Executors.newFixedThreadPool(NUM_THREADS);
 
     public Window(Simulation sim)
     {
         this.sim = sim;
 
-        this.debug = true;
+        this.debug = false;
 
         this.running = false;
         this.pause = false;
@@ -244,20 +288,28 @@ public class Window
 
         // setup jframe window
         frame    = new JFrame("Epidemic Simulator");
-        grid     = new GridPanel();
         controls = new ControlPanel();
-
-        frame.add(grid, BorderLayout.CENTER);
         frame.add(controls, BorderLayout.EAST);
 
+        frame.pack();
         frame.setSize(800, 800);
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         frame.setLocationRelativeTo(null);
-
         frame.setVisible(true);
-        Dimension dim = grid.getSize();
-        cellSize = Math.min((double) dim.width / (sim.gridSize * sim.communitySize),
-                (double) dim.height / sim.gridSize);
+        //Dimension dim = grid.getSize();
+        //cellSize = Math.min((double) dim.width / (sim.gridSize * sim.communitySize),
+        //        (double) dim.height / sim.gridSize);
+
+        grid = new GridPanel();
+        //frame.add(grid.panel, BorderLayout.CENTER);
+        frame.addWindowListener(new WindowAdapter() {
+            @Override
+            public void windowClosing(WindowEvent e) {
+                Window.this.EvaluateData();
+                frame.setVisible(false);
+                frame.dispose();
+            }
+            });
     }
 
     private void tick()
@@ -284,9 +336,13 @@ public class Window
             System.out.println(e);
         }
 
+        // Update Cell Movement
+        sim.cellMovement();
+
         // Update SIR
         sim.GetSIR(); // maybe is better than having each thread count
-        updateListCounts((int)tickCount);
+        updateListCounts();
+        day++;
     }
 
     private void update()
@@ -295,6 +351,7 @@ public class Window
         {
             this.sim.reset(this.newGridSize);
             this.reset = false;
+            ((ControlPanel)controls).updateSIR(0, 0, 0);
         }
     }
 
@@ -308,9 +365,7 @@ public class Window
         // init starting values
         this.running = true;
         this.frameCount = 0;
-        this.sCounts = new ArrayList<Integer>();
-        this.iCounts = new ArrayList<Integer>();
-        this.rCounts = new ArrayList<Integer>();
+        InitializeSIRData();
 
         long prevFrameTime = System.currentTimeMillis();
         long frameTimer = prevFrameTime;
@@ -350,9 +405,11 @@ public class Window
                     long tmpFrameTime = System.currentTimeMillis();
                     long tmpDeltaTime = tmpFrameTime - prevFrameTime;
 
-                    if (tmpDeltaTime > targetFrameDelta)
+                    // if (tmpDeltaTime > targetFrameDelta)
+                    // start skipping ticks at 2 fps instead of target framerate
+                    if (tmpDeltaTime > 500.0)
                     {
-                        tickTime -= tmpDeltaTime;
+                        tickTime -= 500.0;
                         break;
                     }
 
@@ -363,6 +420,7 @@ public class Window
             }
 
             update();
+
             render();
 
             this.frameCount += 1;
@@ -387,31 +445,126 @@ public class Window
         executor.shutdown();
     }
 
-    // Update SIR for this frame (day)
-    public void updateListCounts(int frameCount)
+    // Update SIR for this frame (tickCount)
+    public void updateListCounts()
     {
-        if (sCounts.size() < frameCount+1)
+        while (sCounts.get(curSim).size() < day+1)
         {
-            sCounts.add(0);
-            iCounts.add(0);
-            rCounts.add(0);
+            sCounts.get(curSim).add(0);
+            iCounts.get(curSim).add(0);
+            rCounts.get(curSim).add(0);
         }
-        sCounts.set(frameCount, sim.sCount);
-        iCounts.set(frameCount, sim.iCount);
-        rCounts.set(frameCount, sim.rCount);
+        
+        int[] tempSIR = sim.GetSIR();
+        sCounts.get(curSim).set(day, tempSIR[0]);
+        iCounts.get(curSim).set(day,tempSIR[1]);
+        rCounts.get(curSim).set(day, tempSIR[2]);
     }
 
     // if we want to draw to the screen later
     public void render()
     {
-        grid.repaint();
+        //grid.repaint();
+        ((GridPanel)grid).paintComponent(grid.getGraphics());
         ((ControlPanel)controls).updateTiming(this.fps, this.tps);
-        if ( sCounts.size() > 0 )
+        if ( sCounts.get(curSim).size() > 0 )
         {
             ((ControlPanel)controls).updateSIR(
-                this.sCounts.get((int)tickCount - 1),
-                this.iCounts.get((int)tickCount - 1),
-                this.rCounts.get((int)tickCount - 1));
+                this.sCounts.get(curSim).get(day - 1),
+                this.iCounts.get(curSim).get(day - 1),
+                this.rCounts.get(curSim).get(day - 1));
         }
+    }
+
+    // Initialize variables to store SIR data
+    private void InitializeSIRData()
+    {
+        curSim = 0;
+        sCounts = new ArrayList<ArrayList<Integer>>();
+        iCounts = new ArrayList<ArrayList<Integer>>();
+        rCounts = new ArrayList<ArrayList<Integer>>();
+        AddSIRData();
+    }
+
+    // Add new list for next simulation
+    private void AddSIRData()
+    {
+        day = 0;
+        sCounts.add(new ArrayList<Integer>());
+        iCounts.add(new ArrayList<Integer>());
+        rCounts.add(new ArrayList<Integer>());
+    }
+
+    // Perform various calulations on SIR data
+    // 1. Average, Lowest, and Highest length of epidemic
+    // 2. Rate of simulations in which all cells are infected
+    public void EvaluateData()
+    {
+        int hSimLen=0, lSimLen=0, completedSims=0;
+        float avgSimLen = 0.0f, fullIRate = 0.0f;
+
+        // Loop through simulations
+        System.out.println("\nStarting Population: " + sim.GetStartingPopulation() + ", Infection Chance: " + String.format("%.2f", sim.GetInfectionChance()) + "%");
+        for (int i=0; i<=curSim; i++)
+        {
+            // Skip if simulation is empty
+            System.out.println("\nSimulation " + (i+1) + ":");
+            if (sCounts.get(i).isEmpty())
+            {
+                System.out.println("No data");
+                continue;
+            }
+
+            // Loop through days
+            int j=0;
+            do 
+            {
+                System.out.print("\tDay " + (j+1) + ":" + "\tS: " + (sCounts.get(i).get(j)));
+                System.out.println("\tI: " + iCounts.get(i).get(j) + "\tR: " + rCounts.get(i).get(j));
+                j++;
+            } while (j < iCounts.get(i).size() && iCounts.get(i).get(j-1) != 0); // until no more indices or no more infected
+
+            // Don't add to metrics if simulation wasn't completed
+            if (iCounts.get(i).get(j-1) != 0)
+            {
+                System.out.println("\tSimulation unfinished.");
+                continue;
+            }
+
+            // Calculate metrics
+            completedSims++;
+            avgSimLen += j;
+            if (i==0 || j > hSimLen)
+            {
+                hSimLen = j;
+            }
+            if (i==0 || j < lSimLen)
+            {
+                lSimLen = j;
+            }
+
+            // if all cells got infected
+            if (sCounts.get(i).get(j-1) == 0)
+            {
+                fullIRate++;
+            }
+        }
+        if (completedSims > 0)
+        {
+            avgSimLen /= (float)completedSims;
+            fullIRate /= (float)completedSims;
+        }
+
+        // Print metrics
+        System.out.println("\nCompleted simulations: " + completedSims);
+        if (completedSims == 0)
+        {
+            System.out.println("No data to evaluate.");
+            return;
+        }
+        System.out.println("Average length of epidemic: " + String.format("%.2f", avgSimLen) + " days");
+        System.out.println("Shortest epidemic: " + lSimLen + " days");
+        System.out.println("Longest epidemic: " + hSimLen + " days");
+        System.out.println("Rate in which all cells were infected: " + String.format("%.2f", (fullIRate*100)) + "%");
     }
 }

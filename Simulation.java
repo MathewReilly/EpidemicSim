@@ -39,6 +39,8 @@ public class Simulation
         this.communitySize = communitySize;
         this.gravityPopulation = new int[borderedGridSize*borderedGridSize];
         this.grid = new Cell[communitySize][ borderedGridSize ][ borderedGridSize ];
+        startingPopulation = size*size;
+        infectionChance = 20f;
     }
 
     // this method is largely untested and may run into errors as testing happens
@@ -315,7 +317,7 @@ public class Simulation
         // for all of the susceptible neighbors set for infection based on chance.
         for(int i = 0; i < susCells.size(); i++)
         {
-            if(Math.random() * 100 <= 40)
+            if(Math.random() * 100 <= infectionChance)
             {
                 gridChanges.add(susCells.elementAt(i));
             }
@@ -331,6 +333,15 @@ public class Simulation
             gravityPopulation[gridChanges.elementAt(i).getCom()]++;
         }
 
+        
+        // maybe move to a unique SIR total and have each thread calculate individually?
+        // is this a race condition to access or are copies made for eacth thread?
+        // or maybe calculate under window's tick method, as a final separate step <- currently trying this
+        //GetSIR();
+    }
+
+    public void cellMovement()
+    {
         // Once infections are calculated, cells will move around the land
         int max = 9;
         int min = 1;
@@ -338,8 +349,8 @@ public class Simulation
 
         // For every community, each section will run the moveing cells algorithm
         for (int com = 0; com < communitySize; com++) {
-            for (int rows = rowStart; rows < rowEnd; rows++) {
-                for (int cols = colStart; cols < colEnd; cols++) {
+            for (int rows = 0; rows < gridSize; rows++) {
+                for (int cols = 0; cols < gridSize; cols++) {
                     
                     // gather a random chance to move to a neighboring position
                     int move = (int)(Math.random() * range) + min;
@@ -466,20 +477,13 @@ public class Simulation
                 }
             }
         }
-        
-        
-        // maybe move to a unique SIR total and have each thread calculate individually?
-        // is this a race condition to access or are copies made for eacth thread?
-        // or maybe calculate under window's tick method, as a final separate step <- currently trying this
-        //GetSIR();
     }
 
-    // counts the number of current SIR Cell information to print to screen
-    public void GetSIR()
+    // Get SIR values from this simulation step by returning an array holding
+    // S, I, and R respectively
+    public int[] GetSIR()
     {
-        sCount = 0;
-        iCount = 0;
-        rCount = 0;
+        int[] sir = {0, 0, 0};
         for (int com = 0; com < communitySize; com++) {
             for(int rows = 0; rows < gridSize; rows++)
             {
@@ -488,19 +492,30 @@ public class Simulation
                     Cell curCell = getFromGrid(com, rows, cols);
                     if (curCell.getState() == CellState.SUSCEPTIBLE)
                     {
-                        sCount++;
+                        sir[0]++;
                     }
                     else if (curCell.getState() == CellState.INFECTIOUS)
                     {
-                        iCount++;
+                        sir[1]++;
                     } 
-                    else if (curCell.getState() == CellState.REMOVED)
+                    else if (curCell.getState() == CellState.REMOVED) if (curCell.getState() == CellState.REMOVED)
                     {
-                        rCount++;
+                        sir[2]++;
                     }
                 }
             }
         }
+
+        return sir;
+    }
+    
+    public int GetStartingPopulation()
+    {
+        return this.startingPopulation;
     }
 
+    public float GetInfectionChance()
+    {
+        return this.infectionChance;
+    }
 }

@@ -72,12 +72,14 @@ public class Window
         private JButton resetB;
         private JButton pauseB;
         private JCheckBox debugCB;
+        private JCheckBox graphCB;
         private JTextField gridSizeTF;
         private JTextField deltaFrameTimeTF;
         private JTextField deltaTickTimeTF;
         private JLabel sL;
         private JLabel iL;
         private JLabel rL;
+        private JLabel statusL;
         private JLabel fpsL;
         private JLabel tpsL;
 
@@ -128,7 +130,22 @@ public class Window
                     Window.this.debug = !Window.this.debug;
                 }
             });
+            add(new JLabel(" "));
             add(debugCB);
+
+            /*
+             * GRAPH CHECKBOX
+             */
+
+            graphCB = new JCheckBox("Show Graph");
+            graphCB.setSelected(Window.this.debug);
+            graphCB.addActionListener(new ActionListener() {
+                @Override
+                public void actionPerformed(ActionEvent e)
+                {
+                }
+            });
+            add(graphCB);
 
             /*
              * FRAME TIME TEXT FIELD
@@ -199,6 +216,14 @@ public class Window
             add(rL);
 
             /*
+             * STATUS LABELS
+             */
+
+            statusL = new JLabel();
+            add(new JLabel(" "));
+            add(statusL);
+
+            /*
              * FPS & TPS LABELS
              */
 
@@ -216,6 +241,11 @@ public class Window
             this.tpsL.setText("TPS: " + tps);
         }
 
+        public void updateStatusLabel(String mes)
+        {
+            this.statusL.setText("Status: " + mes);
+        }
+
         public void updateSIRLabel(int s, int i, int r)
         {
             this.sL.setText("S: " + s);
@@ -224,7 +254,16 @@ public class Window
         }
     }
 
+    private enum SimStatus
+    {
+        RUNNING,
+        PAUSED,
+        FINISHED
+    }
+
     private Simulation sim;
+    private SimStatus sStatus;
+
     private JFrame frame;
     private Canvas grid;
     private JPanel controls;
@@ -255,6 +294,7 @@ public class Window
     public Window(Simulation sim)
     {
         this.sim = sim;
+        this.sStatus = SimStatus.RUNNING;
 
         this.debug = false;
 
@@ -292,10 +332,17 @@ public class Window
         });
 
         grid = new GridPanel();
+        //frame.add(grid, BorderLayout.CENTER);
     }
 
     private void tick()
     {
+        if (day > 0 && this.iCounts.get(curSim).get(day - 1) == 0)
+        {
+            this.sStatus = getSimStatus();
+            return;
+        }
+
         ArrayList<Callable<Object>> tasks = new ArrayList<Callable<Object>>();
 
         // Update grid by running simulation step
@@ -304,7 +351,6 @@ public class Window
             // Submit tasks to executor for parallel execution
             final int threadNum = i;
             tasks.add(Executors.callable(() -> sim.simulationStep(threadNum)));
-            //executor.submit(() -> sim.simulationStep(threadNum));
         }
 
         java.util.List<Future<Object>> f;
@@ -323,6 +369,17 @@ public class Window
         day++;
     }
 
+    private SimStatus getSimStatus()
+    {
+        if (this.pause)
+            return SimStatus.PAUSED;
+
+        if (day > 0 && this.iCounts.get(curSim).get(day - 1) == 0)
+            return SimStatus.FINISHED;
+
+        return SimStatus.RUNNING;
+    }
+
     private void update()
     {
         if (this.reset)
@@ -336,6 +393,9 @@ public class Window
 
             this.reset = false;
         }
+
+        // update simulation status
+        this.sStatus = getSimStatus();
     }
 
     private void cleanup()
@@ -415,7 +475,6 @@ public class Window
             }
 
             update();
-
             render();
 
             this.frameCount += 1;
@@ -460,12 +519,20 @@ public class Window
         //grid.repaint();
         ((GridPanel)grid).paintComponent(grid.getGraphics());
         ((ControlPanel)controls).updateTimingLabel(this.fps, this.tps);
-        if ( sCounts.get(curSim).size() > 0 )
+
+        if ( curSim >= 0 && day > 0 )
         {
-            ((ControlPanel)controls).updateSIRLabel(
-                this.sCounts.get(curSim).get(day - 1),
-                this.iCounts.get(curSim).get(day - 1),
-                this.rCounts.get(curSim).get(day - 1));
+            int s = this.sCounts.get(curSim).get(day - 1);
+            int i = this.iCounts.get(curSim).get(day - 1);
+            int r = this.rCounts.get(curSim).get(day - 1);
+            ((ControlPanel)controls).updateSIRLabel(s, i, r);
+        }
+
+        switch (sStatus)
+        {
+            case SimStatus.RUNNING  -> { ((ControlPanel)controls).updateStatusLabel("running"); }
+            case SimStatus.FINISHED -> { ((ControlPanel)controls).updateStatusLabel("finished"); }
+            case SimStatus.PAUSED   -> { ((ControlPanel)controls).updateStatusLabel("paused"); }
         }
     }
 

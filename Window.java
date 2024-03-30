@@ -95,9 +95,6 @@ public class Window
                 public void actionPerformed(ActionEvent e)
                 {
                     Window.this.reset = true;
-                    // Reset start values
-                    Window.this.curSim++;
-                    Window.this.AddSIRData();
                 }
             });
             add(resetB);
@@ -195,7 +192,7 @@ public class Window
             sL = new JLabel();
             iL = new JLabel();
             rL = new JLabel();
-            updateSIR(0, 0, 0);
+            updateSIRLabel(0, 0, 0);
             add(new JLabel(" "));
             add(sL);
             add(iL);
@@ -207,19 +204,19 @@ public class Window
 
             fpsL = new JLabel();
             tpsL = new JLabel();
-            updateTiming(0, 0);
+            updateTimingLabel(0, 0);
             add(new JLabel(" "));
             add(fpsL);
             add(tpsL);
         }
 
-        public void updateTiming(long fps, long tps)
+        public void updateTimingLabel(long fps, long tps)
         {
             this.fpsL.setText("FPS: " + fps);
             this.tpsL.setText("TPS: " + tps);
         }
 
-        public void updateSIR(int s, int i, int r)
+        public void updateSIRLabel(int s, int i, int r)
         {
             this.sL.setText("S: " + s);
             this.iL.setText("I: " + i);
@@ -285,17 +282,16 @@ public class Window
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         frame.setLocationRelativeTo(null);
         frame.setVisible(true);
-
-        grid = new GridPanel();
-        //frame.add(grid.panel, BorderLayout.CENTER);
+        frame.setDefaultCloseOperation(JFrame.DO_NOTHING_ON_CLOSE);
         frame.addWindowListener(new WindowAdapter() {
             @Override
-            public void windowClosing(WindowEvent e) {
-                Window.this.EvaluateData();
-                frame.setVisible(false);
-                frame.dispose();
+            public void windowClosing(WindowEvent e)
+            {
+                Window.this.cleanup();
             }
-            });
+        });
+
+        grid = new GridPanel();
     }
 
     private void tick()
@@ -332,9 +328,26 @@ public class Window
         if (this.reset)
         {
             this.sim.reset(this.newGridSize);
+            ((ControlPanel)controls).updateSIRLabel(0, 0, 0);
+
+            // Reset start values
+            Window.this.curSim++;
+            Window.this.AddSIRData();
+
             this.reset = false;
-            ((ControlPanel)controls).updateSIR(0, 0, 0);
         }
+    }
+
+    private void cleanup()
+    {
+        this.running = false;
+        frame.setVisible(false);
+        frame.dispose();
+        executor.shutdown();
+
+        // do final evaluation of simulations
+        EvaluateData();
+        System.exit(0);
     }
 
     // main loop for the simulation
@@ -423,8 +436,6 @@ public class Window
                 break;
             }
         }
-
-        executor.shutdown();
     }
 
     // Update SIR for this frame (tickCount)
@@ -448,10 +459,10 @@ public class Window
     {
         //grid.repaint();
         ((GridPanel)grid).paintComponent(grid.getGraphics());
-        ((ControlPanel)controls).updateTiming(this.fps, this.tps);
+        ((ControlPanel)controls).updateTimingLabel(this.fps, this.tps);
         if ( sCounts.get(curSim).size() > 0 )
         {
-            ((ControlPanel)controls).updateSIR(
+            ((ControlPanel)controls).updateSIRLabel(
                 this.sCounts.get(curSim).get(day - 1),
                 this.iCounts.get(curSim).get(day - 1),
                 this.rCounts.get(curSim).get(day - 1));

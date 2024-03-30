@@ -9,8 +9,8 @@ public class Simulation
 {
     public int gridSize;
     public int borderedGridSize;
-    private int startingPopulation;
-    private float infectionChance;
+    public int startingPopulation;
+    public float infectionChance;
 
     // sim things - neighborModifiers, make it easy for the thread to locate neighbors in a clearer way
     final int fL = -2; // far left neighbor
@@ -33,8 +33,8 @@ public class Simulation
         this.gridSize = size;
         this.borderedGridSize = size + 8;
         this.grid = new Cell[ borderedGridSize ][ borderedGridSize ];
-        startingPopulation = size*size;
-        infectionChance = 20f;
+        this.startingPopulation = size*size;
+        this.infectionChance = 20f;
     }
 
     // this method is largely untested and may run into errors as testing happens
@@ -75,6 +75,7 @@ public class Simulation
 
         this.gridSize = size;
         this.borderedGridSize = size + 8;
+        this.startingPopulation = size*size;
         this.grid = new Cell[ borderedGridSize ][ borderedGridSize ];
         populateGrid(1);
     }

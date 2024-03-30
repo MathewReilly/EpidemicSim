@@ -12,6 +12,12 @@ public class Window
     {
         private BufferStrategy strategy;
         public JPanel panel;
+        private Dimension dim;
+
+        // used for graph
+        private final int boarder = 100;
+        private double xScale;
+        private double yScale;
 
         public GridPanel()
         {
@@ -23,15 +29,8 @@ public class Window
             strategy = getBufferStrategy();
         }
 
-        //@Override
-        public void paintComponent(Graphics g)
+        private void drawGrid(Graphics2D g2d)
         {
-            //super.paintComponent(g);
-            Graphics2D g2d = (Graphics2D) strategy.getDrawGraphics();
-
-            // draw grid
-            Dimension dim = this.getSize();
-
             int gridSize = Window.this.debug ? Window.this.sim.borderedGridSize : Window.this.sim.gridSize;
             double w = (double) dim.width / gridSize;
             double h = (double) dim.height / gridSize;
@@ -52,7 +51,7 @@ public class Window
 
                     switch (cs)
                     {
-                        case CellState.SUSCEPTIBLE -> { g2d.setColor(Color.blue);  } 
+                        case CellState.SUSCEPTIBLE -> { g2d.setColor(Color.blue);  }
                         case CellState.INFECTIOUS  -> { g2d.setColor(Color.red);   }
                         case CellState.REMOVED     -> { g2d.setColor(Color.green); }
                         case CellState.BORDER      -> { g2d.setColor(Color.gray);  }
@@ -60,6 +59,107 @@ public class Window
 
                     g2d.fill(r);
                 }
+            }
+        }
+
+        private void drawHistory(Graphics2D g2d, ArrayList<Integer> history)
+        {
+            // setup graph variables
+            double prevX;
+            double prevY;
+
+            // draw line graph for S history
+            prevX = boarder;
+            prevY = history.size() > 0 ? (double)(dim.height - (history.get(0) * yScale) - boarder) : boarder;
+            for (int h : history)
+            {
+                double x = prevX + xScale;
+                double y = (double)(dim.height - (h * yScale) - boarder);
+
+                Shape l = new Line2D.Double(prevX, prevY, x, y);
+                g2d.draw(l);
+
+                prevX = x;
+                prevY = y;
+            }
+        }
+
+        private void drawGraph(Graphics2D g2d)
+        {
+            // get simulation sir data
+            ArrayList<Integer> sHistory = Window.this.sCounts.get(Window.this.curSim);
+            ArrayList<Integer> iHistory = Window.this.iCounts.get(Window.this.curSim);
+            ArrayList<Integer> rHistory = Window.this.rCounts.get(Window.this.curSim);
+
+            // get min and max height and width
+            int maxY = Window.this.sim.startingPopulation;
+            int minY = 0;
+
+            int maxX = Window.this.day > 0 ? sHistory.size() : 1;
+            int minX = 0;
+
+            yScale = (double)(dim.height - boarder * 2) / maxY;
+            xScale = (double)(dim.width - boarder * 2) / maxX;
+
+            // draw graph outline
+            g2d.setColor(Color.BLACK);
+            g2d.drawLine(
+                    boarder,
+                    dim.height - boarder,
+                    boarder,
+                    boarder);
+
+            g2d.drawLine(
+                    boarder,
+                    dim.height - boarder,
+                    dim.width  - boarder,
+                    dim.height - boarder);
+
+            // draw graph labels
+            String maxYS = Integer.toString(maxY);
+            String minYS = Integer.toString(minY);
+            String maxXS = Integer.toString(maxX);
+            String minXS = Integer.toString(minX);
+
+            g2d.drawString(maxYS, boarder - (maxYS.length() * 8) - 8, boarder - 8);
+            g2d.drawString(minYS, boarder - (minYS.length() * 8) + 8, dim.height - boarder + 24);
+            g2d.drawString(maxXS, dim.width - boarder, dim.height - boarder + 24);
+            g2d.drawString(minXS, boarder - (minXS.length() * 8) - 8, dim.height - boarder);
+
+            g2d.drawString("Days", dim.width / 2, dim.height - boarder + 24);
+            g2d.drawString("Population", boarder - 64, dim.height / 2);
+
+            // draw graph histories
+            g2d.setColor(Color.BLUE);
+            drawHistory(g2d, sHistory);
+
+            g2d.setColor(Color.RED);
+            drawHistory(g2d, iHistory);
+
+            g2d.setColor(Color.GREEN);
+            drawHistory(g2d, rHistory);
+        }
+
+        //@Override
+        public void paintComponent(Graphics g)
+        {
+            //super.paintComponent(g);
+            Graphics2D g2d = (Graphics2D) strategy.getDrawGraphics();
+
+            // get panel size
+            dim = this.getSize();
+
+            // clear screen
+            g2d.setColor(Color.WHITE);
+            g2d.fillRect(0, 0, dim.width, dim.height);
+
+            if (Window.this.drawGrid)
+            {
+                drawGrid(g2d);
+            }
+            else
+            {
+                drawGraph(g2d);
             }
 
             g2d.dispose();
@@ -143,6 +243,7 @@ public class Window
                 @Override
                 public void actionPerformed(ActionEvent e)
                 {
+                    Window.this.drawGrid = !Window.this.drawGrid;
                 }
             });
             add(graphCB);
@@ -269,6 +370,7 @@ public class Window
     private JPanel controls;
 
     // settings
+    protected boolean drawGrid; // will draw graph on false
     protected boolean debug;
     protected boolean pause;
     protected boolean reset;
@@ -296,8 +398,8 @@ public class Window
         this.sim = sim;
         this.sStatus = SimStatus.RUNNING;
 
+        this.drawGrid = true;
         this.debug = false;
-
         this.running = false;
         this.pause = false;
         this.reset = false;

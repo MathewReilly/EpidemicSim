@@ -44,7 +44,7 @@ public class Simulation
         this.communitySize = communitySize;
         this.gravityPopulation = new int[borderedGridSize*borderedGridSize];
         this.grid = new Cell[communitySize][ borderedGridSize ][ borderedGridSize ];
-        startingPopulation = size*size;
+        startingPopulation = size*size*communitySize;
         infectionChance = 20f;
     }
 
@@ -106,7 +106,7 @@ public class Simulation
 
         this.gridSize = size;
         this.borderedGridSize = size + 8;
-        this.startingPopulation = size*size;
+        this.startingPopulation = size*size*communitySize;
         this.grid = new Cell[communitySize][ borderedGridSize ][ borderedGridSize ];
         populateGrid(1);
     }

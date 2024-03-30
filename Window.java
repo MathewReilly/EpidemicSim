@@ -34,7 +34,7 @@ public class Window
             int gridSize = Window.this.debug ? Window.this.sim.borderedGridSize : Window.this.sim.gridSize;
 
             int communitySize = Window.this.sim.communitySize;
-            double w = (double) dim.width / gridSize;
+            double w = (double) dim.width / (gridSize * communitySize);
             double h = (double) dim.height / gridSize;
             double cellSize = Math.min(w, h);
 
@@ -44,7 +44,7 @@ public class Window
                 {
                     for(int cols = 0; cols < gridSize; cols++)
                     {
-                        double x = cols * cellSize;
+                        double x = cols * cellSize + (com * cellSize * gridSize);
                         double y = rows * cellSize;
     
                         CellState cs = Window.this.debug ?
@@ -416,7 +416,7 @@ public class Window
         // set to 1000 milliseconds (1 second) per frame. Should
         // be lower later on.
         this.targetFrameDelta = 16;
-        this.targetTickDelta = 1000;
+        this.targetTickDelta = 20;
 
         this.fps = 0;
         this.tps = 0;

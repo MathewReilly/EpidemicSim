@@ -193,6 +193,7 @@ public class Window
         private JCheckBox debugCB;
         private JCheckBox graphCB;
         private JTextField gridSizeTF;
+        private JTextField comSizeTF;
         private JTextField deltaFrameTimeTF;
         private JTextField deltaTickTimeTF;
         private JLabel sL;
@@ -323,6 +324,25 @@ public class Window
             add(gridSizeTF);
 
             /*
+             * COMMUNITY SIZE TEXT FIELD
+             */
+
+            comSizeTF = new JTextField();
+            comSizeTF.setText(Integer.toString(Window.this.sim.communitySize));
+            comSizeTF.setMaximumSize(new Dimension(Integer.MAX_VALUE, comSizeTF.getPreferredSize().height));
+            comSizeTF.addActionListener(new ActionListener() {
+                @Override
+                public void actionPerformed(ActionEvent e)
+                {
+                    Window.this.reset = true;
+                    Window.this.newComSize = Integer.parseInt(comSizeTF.getText());
+                }
+            });
+            add(new JLabel(" "));
+            add(new JLabel("Community Size:"));
+            add(comSizeTF);
+
+            /*
              * SIR LABELS
              */
 
@@ -394,6 +414,7 @@ public class Window
     protected boolean pause;
     protected boolean reset;
     protected int newGridSize;
+    protected int newComSize;
 
     // simulation loop stuff
     protected boolean isMultithreaded;
@@ -424,6 +445,7 @@ public class Window
         this.pause = false;
         this.reset = false;
         this.newGridSize = sim.gridSize;
+        this.newComSize = sim.communitySize;
 
         // This will change how long each frame takes. Currently
         // set to 1000 milliseconds (1 second) per frame. Should
@@ -525,7 +547,7 @@ public class Window
     {
         if (this.reset)
         {
-            this.sim.reset(this.newGridSize);
+            this.sim.reset(this.newGridSize, this.newComSize);
             ((ControlPanel)controls).updateSIRLabel(0, 0, 0);
 
             // Reset start values

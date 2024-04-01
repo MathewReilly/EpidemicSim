@@ -34,18 +34,24 @@ public class Window
             int gridSize = Window.this.debug ? Window.this.sim.borderedGridSize : Window.this.sim.gridSize;
 
             int communitySize = Window.this.sim.communitySize;
-            double w = (double) dim.width / (gridSize * communitySize);
-            double h = (double) dim.height / gridSize;
+
+            // number of communites for each row or column
+            int wc = (int)Math.round(Math.sqrt((double)communitySize));
+            int hc = communitySize / wc + (communitySize % wc == 0 ? 0 : 1);
+            double w = (double) dim.width / (gridSize * wc);
+            double h = (double) dim.height / (gridSize * hc);
             double cellSize = Math.min(w, h);
 
+            int rc = 0;
+            int cc = 0;
             for (int com = 0; com < communitySize; com++)
             {
                 for(int rows = 0; rows < gridSize; rows++)
                 {
                     for(int cols = 0; cols < gridSize; cols++)
                     {
-                        double x = cols * cellSize + (com * cellSize * gridSize);
-                        double y = rows * cellSize;
+                        double x = cols * cellSize + (rc * cellSize * gridSize);
+                        double y = rows * cellSize + (cc * cellSize * gridSize);
     
                         CellState cs = Window.this.debug ?
                             Window.this.sim.grid[com][rows][cols].getState() :
@@ -64,6 +70,13 @@ public class Window
     
                         g2d.fill(r);
                     }
+                }
+
+                rc += 1;
+                if (rc >= wc)
+                {
+                    rc = 0;
+                    cc += 1;
                 }
             }
         }

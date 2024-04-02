@@ -34,18 +34,24 @@ public class Window
             int gridSize = Window.this.debug ? Window.this.sim.borderedGridSize : Window.this.sim.gridSize;
 
             int communitySize = Window.this.sim.communitySize;
-            double w = (double) dim.width / (gridSize * communitySize);
-            double h = (double) dim.height / gridSize;
+
+            // number of communites for each row or column
+            int wc = (int)Math.round(Math.sqrt((double)communitySize));
+            int hc = communitySize / wc + (communitySize % wc == 0 ? 0 : 1);
+            double w = (double) dim.width / (gridSize * wc);
+            double h = (double) dim.height / (gridSize * hc);
             double cellSize = Math.min(w, h);
 
+            int rc = 0;
+            int cc = 0;
             for (int com = 0; com < communitySize; com++)
             {
                 for(int rows = 0; rows < gridSize; rows++)
                 {
                     for(int cols = 0; cols < gridSize; cols++)
                     {
-                        double x = cols * cellSize + (com * cellSize * gridSize);
-                        double y = rows * cellSize;
+                        double x = cols * cellSize + (rc * cellSize * gridSize);
+                        double y = rows * cellSize + (cc * cellSize * gridSize);
     
                         CellState cs = Window.this.debug ?
                             Window.this.sim.grid[com][rows][cols].getState() :
@@ -64,6 +70,13 @@ public class Window
     
                         g2d.fill(r);
                     }
+                }
+
+                rc += 1;
+                if (rc >= wc)
+                {
+                    rc = 0;
+                    cc += 1;
                 }
             }
         }
@@ -180,6 +193,7 @@ public class Window
         private JCheckBox debugCB;
         private JCheckBox graphCB;
         private JTextField gridSizeTF;
+        private JTextField comSizeTF;
         private JTextField deltaFrameTimeTF;
         private JTextField deltaTickTimeTF;
         private JLabel sL;
@@ -310,6 +324,25 @@ public class Window
             add(gridSizeTF);
 
             /*
+             * COMMUNITY SIZE TEXT FIELD
+             */
+
+            comSizeTF = new JTextField();
+            comSizeTF.setText(Integer.toString(Window.this.sim.communitySize));
+            comSizeTF.setMaximumSize(new Dimension(Integer.MAX_VALUE, comSizeTF.getPreferredSize().height));
+            comSizeTF.addActionListener(new ActionListener() {
+                @Override
+                public void actionPerformed(ActionEvent e)
+                {
+                    Window.this.reset = true;
+                    Window.this.newComSize = Integer.parseInt(comSizeTF.getText());
+                }
+            });
+            add(new JLabel(" "));
+            add(new JLabel("Community Size:"));
+            add(comSizeTF);
+
+            /*
              * SIR LABELS
              */
 
@@ -381,6 +414,7 @@ public class Window
     protected boolean pause;
     protected boolean reset;
     protected int newGridSize;
+    protected int newComSize;
 
     // simulation loop stuff
     protected boolean isMultithreaded;
@@ -411,6 +445,7 @@ public class Window
         this.pause = false;
         this.reset = false;
         this.newGridSize = sim.gridSize;
+        this.newComSize = sim.communitySize;
 
         // This will change how long each frame takes. Currently
         // set to 1000 milliseconds (1 second) per frame. Should
@@ -512,7 +547,7 @@ public class Window
     {
         if (this.reset)
         {
-            this.sim.reset(this.newGridSize);
+            this.sim.reset(this.newGridSize, this.newComSize);
             ((ControlPanel)controls).updateSIRLabel(0, 0, 0);
 
             // Reset start values

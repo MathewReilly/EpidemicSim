@@ -99,13 +99,14 @@ public class Simulation
     }
 
     // If you alredy have a size, reset grid using that size directly
-    public void reset(int size)
+    public void reset(int size, int csize)
     {
         // force size to be a multiple of 3
         size = size - size % 3;
 
         this.gridSize = size;
         this.borderedGridSize = size + 8;
+        this.communitySize = csize;
         this.startingPopulation = size*size*communitySize;
         this.grid = new Cell[communitySize][ borderedGridSize ][ borderedGridSize ];
         populateGrid(1);

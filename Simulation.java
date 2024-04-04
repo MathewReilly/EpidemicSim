@@ -37,15 +37,7 @@ public class Simulation
     // setup simulation
     public Simulation( int size, int communitySize )
     {
-        // force size to be a multiple of 3
-        size = size - size % 3;
-        this.gridSize = size;
-        this.borderedGridSize = size + 8;
-        this.communitySize = communitySize;
-        this.gravityPopulation = new int[borderedGridSize*borderedGridSize];
-        this.grid = new Cell[communitySize][ borderedGridSize ][ borderedGridSize ];
-        startingPopulation = size*size*communitySize;
-        infectionChance = 20f;
+        this.reset( size, communitySize );
     }
 
     // this method is largely untested and may run into errors as testing happens
@@ -81,8 +73,8 @@ public class Simulation
     public Cell getFromGrid(int communitySize, int row, int col)
     {
         // wrap coordinates
-        row = row % gridSize;
-        col = col % gridSize;
+        row = (row % gridSize + gridSize) % gridSize;
+        col = (col % gridSize + gridSize) % gridSize;
 
         int split = gridSize / 3;
         int x = (2 * ((col / split) + 1) + col);
@@ -107,9 +99,11 @@ public class Simulation
         this.gridSize = size;
         this.borderedGridSize = size + 8;
         this.communitySize = csize;
-        this.startingPopulation = size*size*communitySize;
-        this.grid = new Cell[communitySize][ borderedGridSize ][ borderedGridSize ];
-        populateGrid(1);
+        this.gravityPopulation = new int[ borderedGridSize*borderedGridSize ];
+        this.grid = new Cell[ csize ][ borderedGridSize ][ borderedGridSize ];
+        startingPopulation = size * size * csize;
+        infectionChance = 20f;
+        populateGrid( 1 );
     }
 
     // The cells states by default is susceptible making our default grid that of susceptible cells, however there needs to be

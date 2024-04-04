@@ -36,7 +36,7 @@ public class Window
             int communitySize = Window.this.sim.communitySize;
 
             // number of communites for each row or column
-            int wc = (int)Math.round(Math.sqrt((double)communitySize));
+            int wc = (int)Math.ceil(Math.sqrt((double)communitySize));
             int hc = communitySize / wc + (communitySize % wc == 0 ? 0 : 1);
             double w = (double) dim.width / (gridSize * wc);
             double h = (double) dim.height / (gridSize * hc);
